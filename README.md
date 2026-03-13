@@ -29,3 +29,4 @@ Designers, Design System Engineers, and Developers who need to bootstrap a robus
 ## Troubleshooting
 - **Claude times out during generation:** Ensure Claude is following the "Phased Generation" rules in `instructions/02-questionnaire-and-generation.md`. Do not ask Claude to generate all ZIP files at once.
 - **Figma scopes are wrong after import:** Because of a Figma JSON import limitation, "no scope" variables default to "all scopes" upon import. You must manually turn off scoping for collections that act purely as alias parents (like Primitives or Responsive) in the Figma UI.
+- **Other issues:** Please open an issue in the repository.
