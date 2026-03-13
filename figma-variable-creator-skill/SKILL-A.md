@@ -30,58 +30,43 @@ You are a world-class design system architect — thinking as both senior produc
 
 ---
 
-## PHASE 0 — EXISTING FIGMA SYSTEM?
-
-Ask using ask_user_input:
-
-> "Do you have an existing component system in Figma you'd like to build on?"
-
-Options: `Yes — I'll export my existing variables` / `No — starting from scratch`
-
-**If YES:** Give these exact export instructions:
-
-> To export your variables from Figma:
-> 1. Open your Figma file → open the **Local Variables** panel (right sidebar or via the main menu)
-> 2. **Right-click on each collection** (e.g. "Colours", "Spacing", "Typography") → select **"Export variables"**
-> 3. You'll get one JSON file per collection — do this for every collection you have
-> 4. **Before sharing: rename each file** so it's clear what it contains — e.g. rename `variables.json` to `my-colours-primitives.json`, `my-spacing.json`, `my-typography.json` etc. This helps me understand your system structure
-> 5. Share all the renamed files here
-
-Once received: analyse naming conventions, existing token paths, modes, alias chains. Adapt the generated system to match their conventions.
-
-Then ask using ask_user_input:
-> "How would you like to proceed?"
-
-Options: `Migrate + extend existing tokens` / `Start fresh, keep existing as-is`
-
----
-
 ## PHASE 1 — QUESTIONNAIRE
 
 ### Critical Rules
 - **Every question with discrete options uses `ask_user_input` tool — always**
-- **Open-text questions (brand name, colour hex, font names) are asked as plain text — wait for user response before proceeding**
-- **Do NOT show a dropdown while an open-text question is pending**
+- **Open-text questions (brand name, colour hex, font names) are asked as plain text — WAIT for user response before proceeding. Never show a dropdown while an open-text question is pending.**
 - **Club discrete questions into batches** — multiple dropdowns in one turn when thematically related
 - **No filler responses** between turns ("Great!", "Perfect!" — skip entirely)
-- **Last option on every dropdown** allows custom input
-- **If user selects a custom/open option or describes something unusual, ask a follow-up** for clarity before proceeding to the next turn
+- **If user selects a custom/open option or describes something unusual, ask a follow-up** for clarity before proceeding to the next turn.
 
 ---
 
-### TURN 1 — Brand Name (open text only)
+### TURN 1 — Existing Figma System?
 
-Ask only this:
+Ask using `ask_user_input` (single_select):
 
-> "What's the name of your brand or product?"
+> "Do you have an existing component system in Figma you'd like to build on?"
+- `Yes — I'll export my existing variables`
+- `No — starting from scratch`
 
-Wait for the response. Do not show any dropdowns yet.
+**If YES:** Give these exact export instructions:
+> To export your variables from Figma:
+> 1. Open your Figma file → open the **Local Variables** panel
+> 2. **Right-click on each collection** → select **"Export variables"**
+> 3. **Rename each file** so it's clear what it contains (e.g. `my-primitives.json`)
+> 4. Share all the renamed files here
+
+*Wait for the user to upload the files. Once received, analyse them to learn their conventions.*
+*If NO, proceed immediately to Turn 2.*
 
 ---
 
-### TURN 2 — Existing Codebase (conditional)
+### TURN 2 — Existing Codebase (mandatory)
 
-**Q1** *(ask_user_input — single_select)*: "Do you have an existing product already built? If yes, what kind?"
+*Always ask this question, even if they uploaded Figma tokens in Turn 1, to ensure design/dev harmony.*
+
+Ask using `ask_user_input` (single_select):
+> "Do you have an existing product already built? If yes, what kind?"
 - `Yes — Website / Web App`
 - `Yes — Mobile App (iOS/Android/React Native)`
 - `Yes — Desktop App`
@@ -98,122 +83,10 @@ Wait for the response. Then:
 > - Then paste the entire script below and press Enter
 > - The result will be **copied to your clipboard automatically** — paste it here"
 
-Then show this script in a code block:
+**ACTION: Read and show the script from `tools/token-extractor.js` in a code block.**
 
 ```javascript
-(function () {
-  const tokens = {
-    colors: new Set(), fontSizes: new Set(), fontFamilies: new Set(),
-    fontWeights: new Set(), lineHeights: new Set(), letterSpacings: new Set(),
-    spacing: new Set(), radii: new Set(), shadows: new Set(),
-    zIndex: new Set(), cssVariables: {}, transitions: new Set()
-  };
-
-  function parseColor(v) {
-    v = v.trim();
-    if (!v || v === 'transparent' || v === 'none' || v === 'inherit' || v === 'currentColor') return null;
-    if (v === 'rgba(0, 0, 0, 0)' || v === 'rgb(0, 0, 0, 0)') return null;
-    if (v.startsWith('#')) return v;
-    const rgb = v.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
-    if (rgb) {
-      const hex = [rgb[1], rgb[2], rgb[3]]
-        .map(n => Math.round(parseFloat(n)).toString(16).padStart(2, '0')).join('');
-      return '#' + hex;
-    }
-    const hsl = v.match(/hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/);
-    if (hsl) {
-      let [h, s, l] = [parseFloat(hsl[1]) / 360, parseFloat(hsl[2]) / 100, parseFloat(hsl[3]) / 100];
-      const hue = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q-p)*6*t; if (t < 1/2) return q; if (t < 2/3) return p + (q-p)*(2/3-t)*6; return p; };
-      if (s === 0) { const v = Math.round(l * 255); return '#' + v.toString(16).padStart(2,'0').repeat(3); }
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
-      return '#' + [hue(p,q,h+1/3), hue(p,q,h), hue(p,q,h-1/3)].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('');
-    }
-    return v;
-  }
-
-  const colorProps = ['color','background-color','border-color','border-top-color',
-    'border-bottom-color','border-left-color','border-right-color',
-    'outline-color','fill','stroke','caret-color','text-decoration-color'];
-
-  function scanElement(el) {
-    try {
-      const s = getComputedStyle(el);
-      colorProps.forEach(p => { const c = parseColor(s.getPropertyValue(p)); if (c) tokens.colors.add(c); });
-      const fs = s.getPropertyValue('font-size'); if (fs && fs !== '0px') tokens.fontSizes.add(fs);
-      const ff = s.getPropertyValue('font-family'); if (ff) tokens.fontFamilies.add(ff.split(',')[0].replace(/['"]/g,'').trim());
-      const fw = s.getPropertyValue('font-weight'); if (fw) tokens.fontWeights.add(fw);
-      const lh = s.getPropertyValue('line-height'); if (lh && lh !== 'normal') tokens.lineHeights.add(lh);
-      const ls = s.getPropertyValue('letter-spacing'); if (ls && ls !== 'normal') tokens.letterSpacings.add(ls);
-      ['margin','margin-top','margin-bottom','margin-left','margin-right',
-       'padding','padding-top','padding-bottom','padding-left','padding-right',
-       'gap','row-gap','column-gap'].forEach(p => { const v = s.getPropertyValue(p); if (v && v !== '0px') tokens.spacing.add(v); });
-      const r = s.getPropertyValue('border-radius'); if (r && r !== '0px') tokens.radii.add(r);
-      const sh = s.getPropertyValue('box-shadow'); if (sh && sh !== 'none') tokens.shadows.add(sh);
-      const z = s.getPropertyValue('z-index'); if (z && z !== 'auto' && z !== '0') tokens.zIndex.add(z);
-      const tr = s.getPropertyValue('transition'); if (tr && tr !== 'none' && tr !== 'all 0s ease 0s') tokens.transitions.add(tr);
-      if (el.shadowRoot) el.shadowRoot.querySelectorAll('*').forEach(scanElement);
-    } catch(e) {}
-  }
-
-  document.querySelectorAll('*').forEach(scanElement);
-
-  const sheets = [...document.styleSheets];
-  const allStyleTags = [...document.querySelectorAll('style')];
-  allStyleTags.forEach(tag => {
-    try {
-      if (tag.sheet && !sheets.includes(tag.sheet)) sheets.push(tag.sheet);
-    } catch(e) {}
-  });
-
-  sheets.forEach(sheet => {
-    try {
-      const rules = [...(sheet.cssRules || [])];
-      rules.forEach(rule => {
-        if (rule.style) {
-          [...rule.style].forEach(prop => {
-            if (prop.startsWith('--')) {
-              tokens.cssVariables[prop] = rule.style.getPropertyValue(prop).trim();
-            }
-          });
-        }
-        if (rule.cssRules) {
-          [...rule.cssRules].forEach(r => {
-            if (r.style) [...r.style].forEach(p => {
-              if (p.startsWith('--')) tokens.cssVariables[p] = r.style.getPropertyValue(p).trim();
-            });
-          });
-        }
-      });
-    } catch(e) {}
-  });
-
-  const cssVarCount = Object.keys(tokens.cssVariables).length;
-  const colorList = [...tokens.colors].sort();
-  const spacingList = [...tokens.spacing].sort((a,b) => parseFloat(a)-parseFloat(b));
-
-  const result = {
-    cssVariables: tokens.cssVariables,
-    colors: colorList,
-    fontSizes: [...tokens.fontSizes].sort((a,b) => parseFloat(a)-parseFloat(b)),
-    fontFamilies: [...tokens.fontFamilies].sort(),
-    fontWeights: [...tokens.fontWeights].sort(),
-    lineHeights: [...tokens.lineHeights].sort(),
-    letterSpacings: [...tokens.letterSpacings].sort(),
-    spacing: spacingList,
-    radii: [...tokens.radii].sort(),
-    shadows: [...tokens.shadows].sort(),
-    zIndex: [...tokens.zIndex].sort(),
-    transitions: [...tokens.transitions].sort()
-  };
-
-  const out = JSON.stringify(result, null, 2);
-  try { copy(out); console.log('%c✅ Copied to clipboard!', 'color:green;font-weight:bold'); }
-  catch(e) { console.warn('copy() not available — manually copy the JSON below'); }
-  console.log('%cDESIGN TOKENS EXTRACTED', 'color:#7C3AED;font-size:14px;font-weight:bold');
-  console.log(result);
-  console.log(`CSS vars: ${cssVarCount} | Colors: ${colorList.length} | Font sizes: ${result.fontSizes.length} | Spacing values: ${spacingList.length} | Radii: ${result.radii.length}`);
-  return out;
-})();
+// [AI: Insert content of tools/token-extractor.js here]
 ```
 
 **If Yes — Mobile App or Yes — Desktop App:** Tell the user:
@@ -226,9 +99,21 @@ Then show this script in a code block:
 
 **If No — starting fresh:** Continue to Turn 3.
 
-After receiving token data (from script or developer files): Analyse the output — identify the existing colour palette, spacing scale, font stack, naming conventions, and any CSS variable naming patterns. Use this to inform the generated system: match existing hex values in Primitives, match naming style in token paths.
+*After receiving token data (from Turn 1 or Turn 2):* Analyse the output — identify the existing colour palette, spacing scale, font stack, naming conventions, and any CSS variable naming patterns. Use this to inform the generated system: match existing hex values in Primitives, match naming style in token paths.
 
 ---
 
+### TURN 3 — Brand Name (Dynamic)
 
-> Questionnaire continues in `SKILL-B.md` — Turns 3–9, Phase 2 confirm architecture.
+If the user uploaded Figma files (Turn 1) or Code tokens (Turn 2), scan them for a brand name. 
+**If found:**
+> "I see your brand is [Brand Name]. Would you like to keep this, or enter a custom name?"
+*(Wait for their response)*
+
+**If NO tokens were provided, or no brand name was found:**
+> "What's the name of your brand or product?"
+*(Wait for their open-text response)*
+
+---
+
+> Questionnaire continues in `SKILL-B.md` — Turns 4–9, Phase 2 confirm architecture.

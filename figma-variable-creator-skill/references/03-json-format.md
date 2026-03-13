@@ -65,7 +65,7 @@
 
 - `targetVariableId` — the `com.figma.variableId` of the target token
 - `targetVariableName` — path using **forward slashes only**, mirroring JSON nesting depth. `sdfdsf/Color`, `color/black/opacity/24`, `spacing/16`
-- `targetVariableSetName` — exact collection name: `Primitives`, `Theme`, `Component Colors`, etc.
+- `targetVariableSetName` — exact, un-numbered collection name: `Primitives`, `Theme`, `Component Colors`. **CRITICAL:** Do NOT prepend the import order number to this field (e.g. use `Primitives` not `1. Primitives`), otherwise Figma aliases will break.
 
 **Every non-primitive token must have aliasData.** No exceptions. Dark mode tokens, Typography tokens, Component Colors, Effects numeric tokens — all must have aliasData.
 
@@ -137,16 +137,20 @@ Increment the second number per token. Each mode in a collection shares the same
 
 ## ZIP File Structure
 
+**CRITICAL RULE: INNER ZIP NUMBERING**  
+To ensure the designer imports collections in the exact correct order without prepending numbers to the actual Figma collection name, you must generate a master `.zip` widget but name the inner collection ZIPs sequentially based on their import requirement.
+
 ```
-Primitives.zip        → Value.tokens.json
-Effects.zip           → light.tokens.json, dark.tokens.json
-Theme.zip             → light.tokens.json, dark.tokens.json
-Density.zip           → compact.tokens.json, comfortable.tokens.json, spacious.tokens.json
-Layout.zip            → xs.tokens.json, sm.tokens.json, md.tokens.json, lg.tokens.json, xl.tokens.json, xxl.tokens.json
-Typography.zip        → Value.tokens.json
-Semantic.zip          → Value.tokens.json
-ComponentColors.zip   → Value.tokens.json
-ComponentDimensions.zip → mobile.tokens.json, tablet.tokens.json, desktop.tokens.json
+1. Primitives.zip       → Value.tokens.json
+2. Theme.zip            → light.tokens.json, dark.tokens.json
+3. Responsive.zip       → mobile.tokens.json, tablet.tokens.json, desktop.tokens.json
+4. Density.zip          → compact.tokens.json, comfortable.tokens.json, spacious.tokens.json
+5. Layout.zip           → xs.tokens.json, sm.tokens.json, md.tokens.json, lg.tokens.json, xl.tokens.json, xxl.tokens.json
+6. Effects.zip          → effects.tokens.json
+7. Typography.zip       → typography.tokens.json
+8. Semantic.zip         → semantic.tokens.json
+9. ComponentColors.zip  → component-colors.tokens.json
+10. ComponentDimensions.zip → mobile.tokens.json, tablet.tokens.json, desktop.tokens.json
 ```
 
 ## Python ZIP Builder
@@ -166,7 +170,7 @@ def write_zip(zip_name: str, files: dict):
 ### ALL collections
 - [ ] Every non-primitive token has `com.figma.aliasData` with all 3 required fields
 - [ ] `targetVariableName` uses slashes: `color/grey/900` not `color.grey.900`
-- [ ] `targetVariableSetName` matches collection name exactly
+- [ ] `targetVariableSetName` matches the un-numbered collection name exactly (e.g. `Primitives` — never `1. Primitives`)
 - [ ] `targetVariableSetId` is NOT present (omit entirely)
 - [ ] All color `$value` are objects — never bare hex strings
 - [ ] All string tokens have `"com.figma.type": "string"`

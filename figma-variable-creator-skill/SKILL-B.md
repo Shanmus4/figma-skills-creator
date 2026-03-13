@@ -1,4 +1,4 @@
-### TURN 3 — Product Type + Colours (dropdowns)
+### TURN 4 — Product Type + Colours (dropdowns)
 
 After the codebase question is resolved, show these four dropdowns together:
 
@@ -35,12 +35,13 @@ After the codebase question is resolved, show these four dropdowns together:
 
 ---
 
-### TURN 4 — Colour Modes + Architecture
+### TURN 5 — Colour Modes + Architecture
 
 **Q6** *(ask_user_input — single_select)*: "Colour modes?"
 - `Light only`
 - `Dark only`
 - `Both light and dark`
+- `Custom (including High Contrast / accessibility themes)`
 
 **Q7** *(ask_user_input — single_select)*: "Token layer architecture?"
 - `1-layer — Primitives + Typography + optional collections. Smallest system. Good for prototypes or tiny teams.`
@@ -52,7 +53,7 @@ After the codebase question is resolved, show these four dropdowns together:
 
 ---
 
-### TURN 5 — Optional Collections
+### TURN 6 — Optional Collections
 
 Show all optional collection questions as a batch. The Responsive collection is always included (it is mandatory — Typography and Component Dimensions both require it). Only ask about the truly optional ones:
 
@@ -76,7 +77,7 @@ Show all optional collection questions as a batch. The Responsive collection is 
 
 ---
 
-### TURN 6 — Component Details
+### TURN 7 — Component Details
 *(Only show if architecture is 3-layer or 4-layer)*
 
 **Q12** *(open text)*: "Which components need dedicated colour tokens in Component Colors?
@@ -103,7 +104,7 @@ Wait for the response. Then show:
 
 ---
 
-### TURN 7 — Typography + Fonts
+### TURN 8 — Typography + Fonts
 
 **Q15** *(ask_user_input — single_select)*: "Typography scale?"
 - `Standard 12 roles — display, heading, subheading, body-lg, body, body-sm, label-lg, label, label-sm, caption, overline, code`
@@ -119,7 +120,7 @@ Wait for the response. Then show:
 
 ---
 
-### TURN 8 — Naming + Code Syntax
+### TURN 9 — Naming + Code Syntax
 
 **Q17** *(ask_user_input — single_select)*: "Token code syntax format?"
 - `CSS custom properties — e.g. --color-button-primary-background`
@@ -136,15 +137,13 @@ Wait for the response. Then show:
 - `IBM Carbon — color.background / color.layer-01 / color.text-primary`
 - `Custom — I'll describe`
 
+> *Conversational Tip:* Reassure the user that modern, scalable systems use terms like `surface/page` or `surface/default` for backgrounds, and `text/primary` for main text. They do not need to worry if they don't see the exact phrase "page background" in the examples.
+
 ---
 
-### TURN 9 — Final Options
+### TURN 10 — Final Options
 
-**Q19** *(ask_user_input — single_select)*: "High-contrast accessibility mode (WCAG AAA)?"
-- `Yes — add high-contrast mode`
-- `No`
-
-**Q20** *(open text)*: "Any other requirements — specific token values, tokens to avoid, existing conventions to match, or anything else? (leave blank to proceed)"
+**Q19** *(open text)*: "Any other requirements — specific token values, tokens to avoid, existing conventions to match, or anything else? (leave blank to proceed)"
 
 Wait for response. If the user describes something requiring follow-up (e.g. a custom collection, a non-standard architecture), ask clarifying questions before proceeding to Phase 2.
 
@@ -185,6 +184,17 @@ CC split:      {split / flat / N/A}
 High contrast: {yes/no}
 ```
 
+**EVALUATE INITIAL RESOURCES & COMPLEXITY:**
+Before asking for confirmation, evaluate the raw size of the requested system against your own context and output token limits. Decide intelligently which generation path to take:
+
+**Path 1: One-Shot Generation**
+- Decide this if: You calculate that you can comfortably generate all JSON structures for the requested architecture in a single output window without hitting a timeout or trailing off.
+- Tell the user: *"System complexity is well within my limits. I will generate everything in a single ZIP file immediately."*
+
+**Path 2: Phased Generation**
+- Decide this if: You calculate the architecture is massive (e.g. 4-layer, or many dense optional collections) and poses a high risk of an output timeout or incomplete JSON generation.
+- Tell the user: *"To ensure absolute precision and prevent timeouts while calculating this massive architecture, I will break this into three background phases (Turns A, B, and C). You will only need to type 'Next' when prompted. I will provide ONE combined final ZIP file at the very end."*
+
 Ask using ask_user_input: `Yes — generate everything` / `Change something first`
 
 **Do not generate a single token until the user confirms.**
@@ -198,47 +208,61 @@ Read ALL 5 reference files before writing any JSON.
 **OUTPUT CONSTRAINT CRITICAL RULE:**
 You must ONLY output valid `.zip` files containing the structured JSON. NEVER output `.skill` files or dump massive scripts to the user. Do not wrap the output in proprietary skill abstractions.
 
-> **CRITICAL PERFORMANCE RULE:** Do NOT attempt to write one giant script or generate all ZIP files in a single turn. Generating 700+ tokens at once will cause you to time out and fail. 
-> You must strictly break the generation across multiple turns as instructed below. You must stop generating and wait for the user to reply "Next" before proceeding to the next turn. Do not write extensive `<thinking>` blocks. Execute immediately.
+> **CRITICAL PERFORMANCE RULE FOR PATH 2:** Do NOT attempt to write one giant script or generate all JSON in a single turn. You must safely break the generation across multiple turns as instructed below. Wait for the user to reply "Next" before proceeding. 
+
+> **CONSOLIDATED ZIP RULE:** Do NOT output the `.zip` file widget in Turn A or Turn B. Keep the JSON payload in your memory. You must only output the final `design-tokens.zip` widget during **TURN C**. The internal collection zips inside `design-tokens.zip` MUST be numbered by their import order (e.g., `1. Primitives.zip`, `2. Theme.zip`) as governed by the JSON Format reference.
 
 > **ALIAS INTEGRITY RULE — ZERO BROKEN REFERENCES:** Every alias in a downstream collection (Theme, Responsive, Density, Effects, Typography, Semantic, Component Colors, Component Dimensions) MUST point to a token that already exists in its parent collection. If a downstream token needs a Primitive value that wasn't generated yet, you MUST add that token to Primitives first. Never ship a ZIP containing an alias whose target does not exist — Figma will silently fail on import.
 
 ---
 
-### TURN A — Core Foundations
-**Before writing Primitives:** Plan all downstream alias targets (Theme, Responsive, Density, Effects, Typography, Components). Backfill any missing primitive tokens so every future alias has a valid target. Generate Primitives LAST-MILE — after planning all downstream values, add any missing primitive tokens before writing the ZIP.
+### PATH 1: ONE-SHOT GENERATION
+*(Execute immediately after user confirms "Yes", skipping Turns A/B/C)*
+Generate all collections (Primitives, Theme, Responsive, Typography, plus any selected optional collections). 
+Compile all JSON data and output **ONE single `.zip` widget** containing all files. 
+Then, jump directly to **Turn D (Token count reporting)**.
 
-Generate and output the ZIP files for these collections ONLY:
-1. **Primitives:** full colour palette + alpha variants (Razorpay flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
+---
+
+### PATH 2: PHASED GENERATION 
+*(Execute if complexity requires chunking)*
+
+### TURN A — Core Foundations
+**Before writing Primitives:** Plan all downstream alias targets (Theme, Responsive, Density, Effects, Typography, Components). Backfill any missing primitive tokens so every future alias has a valid target. Generate Primitives LAST-MILE — after planning all downstream values, add any missing primitive tokens.
+
+Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET):
+1. **Primitives:** full colour palette + alpha variants (flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
 2. **Theme:** every surface/text/border/interactive/feedback/overlay group, all states + shadow colour tokens
 
-*Stop here. Provide the ZIPs and explicitly tell the user: "Type **Next** to generate structural collections (Responsive, Density, Layout, Effects)."*
+*Stop here. Explicitly tell the user: "Phase A complete (Primitives & Theme). Type **Next** to generate structural collections (Responsive, Density, Layout, Effects)."*
 
 ---
 
 ### TURN B — Structural Collections
 *(Wait for user to type "Next")*
 
-Generate and output the ZIP files for these collections ONLY:
+Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET):
 1. **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
 2. **Density:** padding (x/y/top/bottom/left/right, with full xs-4xl scale nested under each direction — e.g. `padding/x/md`, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
 3. **Layout:** Layout structural variables (if selected)
 4. **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
 
-*Stop here. Provide the ZIPs and explicitly tell the user: "Type **Next** to generate the final component and semantic collections."*
+*Stop here. Explicitly tell the user: "Phase B complete. Type **Next** to generate the final component collections and compile the ZIP."*
 
 ---
 
-### TURN C — Components & Semantics
+### TURN C — Components & Final Compilation
 *(Wait for user to type "Next")*
 
-Generate and output the ZIP files for these collections ONLY:
+Calculate the JSON for these collections ONLY:
 1. **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → Theme
 2. **Semantic (if applicable):** as per 4-layer architecture rules
 3. **Component Colors:** every component × every variant × every state × every layer + icon duotone tokens
 4. **Component Dimensions:** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
 
-*Stop here. Provide the ZIPs and automatically proceed to Turn D.*
+**CRITICAL STEP:** Now take the JSON from Turn A, Turn B, and Turn C. Package them all together and output **ONE SINGLE `.zip` WIDGET** containing everything.
+
+*Automatically proceed to Turn D.*
 
 ---
 

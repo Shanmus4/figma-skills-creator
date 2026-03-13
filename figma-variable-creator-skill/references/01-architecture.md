@@ -52,7 +52,7 @@ primitives/spacing/16              hardcoded 16, NO scope
 Density: padding/x/md              GAP — compact=8, comfortable=12, spacious=16 ← picker tip
                                    (Component Dimensions aliases Density for padding/gap)
 
-── RADIUS / BORDER CHAIN (NEW) ───────────────────────────
+── RADIUS / BORDER CHAIN ───────────────────────────
 primitives/radius/md               hardcoded 8, NO scope
         ↓
 Responsive: radius/md              CORNER_RADIUS — mobile=6, tablet=7, desktop=8 ← picker tip
@@ -74,7 +74,7 @@ Effects: shadow/sm/color           EFFECT_COLOR, aliases Theme/shadow/sm/color �
          (no modes — Theme handles light/dark switching)
 ```
 
-## New Collection: Responsive
+## Responsive Collection
 
 **Purpose:** Single source for all breakpoint-aware NUMBER tokens. Replaces per-shade radius hardcoding and connects Typography numerical values to breakpoints.
 

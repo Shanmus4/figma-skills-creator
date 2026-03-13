@@ -1,5 +1,7 @@
 # Figma Variables Creator Skill
 
+*Developed by Shanmu*
+
 ## What it is
 A specialized skill for Anthropic's Claude that acts as an expert interviewer and code generator for creating massive, production-ready Figma Variable JSON files. It guides users through architectural decisions and generates complex token systems (Primitives, Theme, Responsive, Typography, Density, etc.) based on their exact brand needs.
 

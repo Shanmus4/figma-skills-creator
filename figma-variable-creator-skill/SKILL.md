@@ -1,5 +1,6 @@
 ---
 name: figma-variables-creator
+author: Shanmu
 description: >
   Create production-grade Figma Variables JSON ZIP files for any design system.
   Triggered when user asks to create Figma variables, design tokens, a design system,

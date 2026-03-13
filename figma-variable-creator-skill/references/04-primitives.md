@@ -11,7 +11,7 @@
 
 ---
 
-## CRITICAL: Opacity Pattern — Razorpay Style
+## CRITICAL: Opacity Pattern
 
 Alpha variants sit as **flat siblings** alongside solid shades inside the same colour family folder. This avoids the mixed token+group Figma bug.
 
