@@ -116,4 +116,4 @@ If the user uploaded Figma files (Turn 1) or Code tokens (Turn 2), scan them for
 
 ---
 
-> Questionnaire continues in `SKILL-B.md` — Turns 4–9, Phase 2 confirm architecture.
+> Questionnaire continues in `02-questionnaire-and-generation.md` — Turns 4–9, Phase 2 confirm architecture.

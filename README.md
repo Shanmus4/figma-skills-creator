@@ -20,12 +20,12 @@ Designers, Design System Engineers, and Developers who need to bootstrap a robus
 
 ## Setup Instructions
 1. Download this repository.
-2. In Claude (Claude.ai or Claude Code), use the `claude-skill-creator` to package the `figma-variables-tokens-generator-skill` folder into a `.skill` file, or simply copy-paste the contents of `SKILL.md`, `SKILL-A.md`, `SKILL-B.md`, and `SKILL-C.md` into a new project context.
+2. In Claude (Claude.ai or Claude Code), use the `claude-skill-creator` to package the `figma-variables-tokens-generator-skill` folder into a `.skill` file, or simply copy-paste the contents of `SKILL.md`, `instructions/01-interview-setup.md`, `instructions/02-questionnaire-and-generation.md`, and `instructions/03-import-and-handoff.md` into a new project context.
 3. Prompt Claude to begin the Figma Variables Tokens Generator interview.
 
 ## Live Demo
 *Not applicable — this is an AI skill prompt system, not a web application.*
 
 ## Troubleshooting
-- **Claude times out during generation:** Ensure Claude is following the "Phased Generation" rules in `SKILL-B.md`. Do not ask Claude to generate all ZIP files at once.
+- **Claude times out during generation:** Ensure Claude is following the "Phased Generation" rules in `instructions/02-questionnaire-and-generation.md`. Do not ask Claude to generate all ZIP files at once.
 - **Figma scopes are wrong after import:** Because of a Figma JSON import limitation, "no scope" variables default to "all scopes" upon import. You must manually turn off scoping for collections that act purely as alias parents (like Primitives or Responsive) in the Figma UI.

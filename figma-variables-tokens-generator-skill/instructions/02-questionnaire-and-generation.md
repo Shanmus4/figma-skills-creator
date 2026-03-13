@@ -315,4 +315,4 @@ Tell the user: "These counts reflect unique tokens (one per row in Figma), not m
 ---
 
 
-> Import, scoping, and collection reference in `SKILL-C.md`.
+> Import, scoping, and collection reference in `03-import-and-handoff.md`.

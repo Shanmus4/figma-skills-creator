@@ -24,9 +24,9 @@ Read ALL files before doing anything. Read them in this order:
 
 | # | File | Contains |
 |---|------|----------|
-| 1 | `SKILL-A.md` | Phase 0 (existing Figma system), Phase 1 Turns 1–2 (brand name, codebase extraction) |
-| 2 | `SKILL-B.md` | Phase 1 Turns 3–9 (questionnaire), Phase 2 (confirm architecture), Phase 3 (generation + token counts) |
-| 3 | `SKILL-C.md` | Phase 4 (import instructions), Phase 5 (scoping), Phase 6 (follow up), ZIP reference table |
+| 1 | `instructions/01-interview-setup.md` | Phase 0 (existing Figma system), Phase 1 Turns 1–2 (brand name, codebase extraction) |
+| 2 | `instructions/02-questionnaire-and-generation.md` | Phase 1 Turns 3–9 (questionnaire), Phase 2 (confirm architecture), Phase 3 (generation + token counts) |
+| 3 | `instructions/03-import-and-handoff.md` | Phase 4 (import instructions), Phase 5 (scoping), Phase 6 (follow up), ZIP reference table |
 | 4 | `references/01-architecture.md` | Collection hierarchy, alias chains, import order, mode file naming, scoping rules |
 | 5 | `references/02-scoping-rules.md` | Valid scopes per type, path lookup table |
 | 6 | `references/03-json-format.md` | Exact JSON structure, aliasData format, codeSyntax, validation checklist |
