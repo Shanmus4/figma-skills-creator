@@ -79,15 +79,17 @@ Wait for the response. Do not show any dropdowns yet.
 
 ---
 
-### TURN 2 — Existing Codebase (open text + conditional)
+### TURN 2 — Existing Codebase (conditional)
 
-Ask only this:
-
-> "Do you have an existing product already built? If yes, what kind — website, web app, or mobile app?"
+**Q1** *(ask_user_input — single_select)*: "Do you have an existing product already built? If yes, what kind?"
+- `Yes — Website / Web App`
+- `Yes — Mobile App (iOS/Android/React Native)`
+- `Yes — Desktop App`
+- `No — starting fresh without an existing codebase`
 
 Wait for the response. Then:
 
-**If website or web app:** Tell the user:
+**If Yes — Website / Web App:** Tell the user:
 
 > "To help me match your existing design system, open your product in **Chrome** and run this script in the browser console. It will extract your current design tokens automatically.
 >
@@ -214,15 +216,15 @@ Then show this script in a code block:
 })();
 ```
 
-**If mobile app:** Tell the user:
+**If Yes — Mobile App or Yes — Desktop App:** Tell the user:
 
-> "For mobile apps (iOS/Android/React Native), I can't extract tokens from a console — ask your developer to share:
+> "For mobile/desktop apps, I can't extract tokens from a console — ask your developer to share:
 > - The design tokens file (usually `tokens.js`, `theme.ts`, `colors.ts`, `styles/variables.css`, or a `tokens/` folder)
 > - Or a screenshot of the app with the most common screens — I'll reverse-engineer the palette and spacing from visual inspection
 >
 > Once you share either, I'll adapt the Figma system to match."
 
-**If no existing product:** Continue to Turn 3.
+**If No — starting fresh:** Continue to Turn 3.
 
 After receiving token data (from script or developer files): Analyse the output — identify the existing colour palette, spacing scale, font stack, naming conventions, and any CSS variable naming patterns. Use this to inform the generated system: match existing hex values in Primitives, match naming style in token paths.
 
