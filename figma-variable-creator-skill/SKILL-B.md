@@ -221,7 +221,7 @@ Generate and output the ZIP files for these collections ONLY:
 
 Generate and output the ZIP files for these collections ONLY:
 1. **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
-2. **Density:** padding (x/y/top/bottom/left/right only — 6 directional tokens, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
+2. **Density:** padding (x/y/top/bottom/left/right, with full xs-4xl scale nested under each direction — e.g. `padding/x/md`, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
 3. **Layout:** Layout structural variables (if selected)
 4. **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
 

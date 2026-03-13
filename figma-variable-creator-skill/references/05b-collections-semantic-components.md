@@ -152,13 +152,13 @@ color/button/primary/disabled/border      STROKE
 No modes needed — breakpoint switching is handled by Responsive, density switching by Density.
 
 ### Padding tokens (GAP) — alias Density
+Each direction must alias the full nested scale (xs through 4xl) from Density.
 ```
-dimensions/padding/x      GAP → density/padding/x
-dimensions/padding/y      GAP → density/padding/y
-dimensions/padding/top    GAP → density/padding/top
-dimensions/padding/bottom GAP → density/padding/bottom
-dimensions/padding/left   GAP → density/padding/left
-dimensions/padding/right  GAP → density/padding/right
+dimensions/padding/x/sm      GAP → density/padding/x/sm
+dimensions/padding/x/md      GAP → density/padding/x/md
+dimensions/padding/y/sm      GAP → density/padding/y/sm
+dimensions/padding/y/md      GAP → density/padding/y/md
+... (apply the same xs→4xl nested scale across all directions: top, bottom, left, right)
 ```
 
 ### Gap tokens (GAP) — alias Density

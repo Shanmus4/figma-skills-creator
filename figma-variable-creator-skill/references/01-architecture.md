@@ -49,7 +49,7 @@ Typography: color/primary          TEXT_FILL, aliases Theme ← picker tip
 ── SPACING / DENSITY CHAIN ───────────────────────────────
 primitives/spacing/16              hardcoded 16, NO scope
         ↓
-Density: padding/x                 GAP — compact=8, comfortable=12, spacious=16 ← picker tip
+Density: padding/x/md              GAP — compact=8, comfortable=12, spacious=16 ← picker tip
                                    (Component Dimensions aliases Density for padding/gap)
 
 ── RADIUS / BORDER CHAIN (NEW) ───────────────────────────
