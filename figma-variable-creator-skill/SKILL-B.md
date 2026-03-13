@@ -193,7 +193,12 @@ Ask using ask_user_input: `Yes — generate everything` / `Change something firs
 
 ## PHASE 3 — GENERATION
 
-Read ALL 5 reference files before writing any JSON. Generate ZIPs in import order.
+Read ALL 5 reference files before writing any JSON. 
+
+**OUTPUT CONSTRAINT CRITICAL RULE:**
+You must ONLY output valid `.zip` files containing the structured JSON. NEVER output `.skill` files or dump massive scripts to the user. Do not wrap the output in proprietary skill abstractions.
+
+Generate the `.zip` files in import order.
 
 ### Token density — do not be minimalist
 - **Primitives:** full colour palette + alpha variants (Razorpay flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
