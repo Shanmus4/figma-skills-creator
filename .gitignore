@@ -1,0 +1,16 @@
+# Ignore Claude Skill Creator folder
+Claude Skill Creator/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Any AI or artifacts
+.gemini/
+.claude/
+implementation_plan.md

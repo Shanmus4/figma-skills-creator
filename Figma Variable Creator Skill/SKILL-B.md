@@ -1,0 +1,253 @@
+### TURN 3 — Product Type + Colours (dropdowns)
+
+After the codebase question is resolved, show these four dropdowns together:
+
+**Q2** *(ask_user_input — single_select)*: "What kind of product are you building?"
+- `Web app`
+- `Mobile app`
+- `Web + Mobile`
+- `Desktop app`
+- `Something else — I'll describe`
+
+**Q3** *(ask_user_input — single_select)*: "Primary brand colour?"
+- `I'll paste a hex code (e.g. #3B82F6)`
+- `Blue — confident, trustworthy (e.g. #2563EB)`
+- `Green — growth, health, success (e.g. #16A34A)`
+- `Purple — premium, creative (e.g. #7C3AED)`
+- `Orange — energetic, friendly (e.g. #EA580C)`
+- `Red — bold, urgent (e.g. #DC2626)`
+- `Custom — I'll describe`
+
+**Q4** *(ask_user_input — single_select)*: "Secondary / accent colour direction?"
+- `Complementary — opposite on the colour wheel (high contrast, energetic)`
+- `Analogous — adjacent tones (harmonious, cohesive)`
+- `Neutral accent — muted, desaturated (professional, calm)`
+- `Monochromatic — lighter/darker tint of primary (minimal)`
+- `Custom — I'll provide the hex`
+
+**Q5** *(ask_user_input — single_select)*: "Neutral / grey palette style?"
+- `Cool grey / blue-grey (slight blue tint — e.g. Tailwind Slate)`
+- `Warm grey / sand (slight yellow-beige tint — e.g. Tailwind Stone)`
+- `Pure neutral grey (no tint — e.g. Tailwind Gray)`
+- `Custom — I'll describe`
+
+> If Q3 answer is "I'll paste a hex code" or Q4 is "Custom", ask for the hex as a follow-up open-text question before continuing.
+
+---
+
+### TURN 4 — Colour Modes + Architecture
+
+**Q6** *(ask_user_input — single_select)*: "Colour modes?"
+- `Light only`
+- `Dark only`
+- `Both light and dark`
+
+**Q7** *(ask_user_input — single_select)*: "Token layer architecture?"
+- `1-layer — Primitives + Typography + optional collections. Smallest system. Good for prototypes or tiny teams.`
+- `2-layer — Primitives + Theme + Typography + optional. Standard for most products.`
+- `3-layer — Primitives + Theme + Component Colors + Typography + optional. Per-component colour tokens. Includes Component Dimensions automatically.`
+- `4-layer — Primitives + Theme + Semantic + Component Colors + Typography + optional. Full enterprise depth. Includes Component Dimensions automatically.`
+
+> ARCHITECTURE NOTE: Component Colors AND Component Dimensions are automatically included in 3-layer and 4-layer. Do NOT ask the user again if they want these collections when they have already chosen 3 or 4 layer.
+
+---
+
+### TURN 5 — Optional Collections
+
+Show all optional collection questions as a batch. The Responsive collection is always included (it is mandatory — Typography and Component Dimensions both require it). Only ask about the truly optional ones:
+
+**Q8** *(ask_user_input — single_select)*: "Density collection? Controls padding + gap across compact / comfortable / spacious modes."
+- `Yes — include Density`
+- `No — use fixed spacing values`
+
+**Q9** *(ask_user_input — single_select)*: "Effects collection? Shadow and blur tokens with structured aliasing."
+- `Yes — include Effects`
+- `No`
+
+**Q10** *(ask_user_input — single_select)*: "Layout collection? Grid column/margin/gutter specs per breakpoint (xs → xxl)."
+- `Yes — include Layout`
+- `No`
+
+**Q11** *(ask_user_input — single_select)*: "Any additional custom collections? (e.g. Motion, Z-index, Elevation)"
+- `No — that's everything`
+- `Yes — I'll describe`
+
+> If Q11 is "Yes", ask follow-up: "Describe each custom collection — name, what kind of tokens it contains, and any modes it needs."
+
+---
+
+### TURN 6 — Component Details
+*(Only show if architecture is 3-layer or 4-layer)*
+
+**Q12** *(open text)*: "Which components need dedicated colour tokens in Component Colors?
+
+Note: icon, container, and divider are always included.
+
+Component Colors will be split into two groups:
+- **Interactive** — components with multiple states (default/hover/pressed/disabled): button, input, checkbox, radio, toggle, switch, tooltip, dropdown
+- **Static** — components with fewer/no interaction states: card, modal, badge, tag, navbar, sidebar, table, avatar, alert, banner, chip, progress
+
+List the components you need — I'll assign each to the correct group."
+
+Wait for the response. Then show:
+
+**Q13** *(ask_user_input — single_select)*: "How should Component Colors be organised?"
+- `Split — interactive (button, input, toggle…) vs non-interactive (card, badge, avatar…)`
+- `Flat — all components at the same level`
+- `Custom — I'll describe my grouping`
+
+**Q14** *(ask_user_input — single_select)*: "Icon token needs?"
+- `Fill + stroke + duotone — standard icons with secondary path support`
+- `Fill + stroke + duotone + background — icons inside a coloured container (filled icon buttons, icon chips)`
+- `Fill + stroke only — no duotone, no background`
+
+---
+
+### TURN 7 — Typography + Fonts
+
+**Q15** *(ask_user_input — single_select)*: "Typography scale?"
+- `Standard 12 roles — display, heading, subheading, body-lg, body, body-sm, label-lg, label, label-sm, caption, overline, code`
+- `Extended 16+ roles — adds display-sm, heading-sm, heading-lg, body-strong, numeric/tabular`
+- `Custom — I'll describe the roles I need`
+
+**Q16** *(ask_user_input — single_select)*: "Fonts?"
+- `Inter for everything (placeholder — easy to swap in Figma later)`
+- `Specify now — I'll type the font names`
+- `System font stack`
+
+> If "Specify now": ask open-text — "Primary font (body text)? Display/heading font (if different)? Monospace font for code (optional)?" — wait for response before continuing.
+
+---
+
+### TURN 8 — Naming + Code Syntax
+
+**Q17** *(ask_user_input — single_select)*: "Token code syntax format?"
+- `CSS custom properties — e.g. --color-button-primary-background`
+- `Tailwind / kebab-case — e.g. color-button-primary-background`
+- `JavaScript camelCase — e.g. colorButtonPrimaryBackground`
+- `Android / XML underscore — e.g. color_button_primary_background`
+- `iOS / Swift PascalCase — e.g. ColorButtonPrimaryBackground`
+- `Custom format — I'll describe`
+
+**Q18** *(ask_user_input — single_select)*: "Token naming convention?"
+- `Role-based — color.surface.primary / color.text.secondary`
+- `Component-first — color.button.secondary.default.background`
+- `Material Design — color.surface / color.on-surface / color.surface-variant`
+- `IBM Carbon — color.background / color.layer-01 / color.text-primary`
+- `Custom — I'll describe`
+
+---
+
+### TURN 9 — Final Options
+
+**Q19** *(ask_user_input — single_select)*: "High-contrast accessibility mode (WCAG AAA)?"
+- `Yes — add high-contrast mode`
+- `No`
+
+**Q20** *(open text)*: "Any other requirements — specific token values, tokens to avoid, existing conventions to match, or anything else? (leave blank to proceed)"
+
+Wait for response. If the user describes something requiring follow-up (e.g. a custom collection, a non-standard architecture), ask clarifying questions before proceeding to Phase 2.
+
+---
+
+## PHASE 2 — CONFIRM ARCHITECTURE
+
+Show this summary before generating anything:
+
+```
+ARCHITECTURE SUMMARY
+═══════════════════════════════════════════
+Brand:      {name}
+Product:    {type}
+Layer:      {1/2/3/4}-layer
+
+Collections — import in this exact order:
+  1.  Primitives             always
+  2.  Theme                  always         | {modes}
+  3.  Semantic               4-layer only
+  4.  Responsive             always         | mobile, tablet, desktop
+  5.  Density                {yes/no}       | compact, comfortable, spacious
+  6.  Layout                 {yes/no}       | xs→xxl
+  7.  Effects                {yes/no}       | (single mode)
+  8.  Typography             always         | (single mode)
+  9.  Component Colors       3-layer+       | (single mode)
+  10. Component Dimensions   3-layer+       | (single mode)
+  {custom collections}
+
+Colours:       Primary {hex/name}, Secondary {direction}, Neutral {style}
+Fonts:         {specified / "Inter (placeholder)"}
+Type scale:    {Standard 12 / Extended 16+ / Custom}
+Naming:        {convention}
+Code syntax:   {format}
+Components:    {list or N/A}
+Icon tokens:   {fill+stroke+duotone / +background / basic}
+CC split:      {split / flat / N/A}
+High contrast: {yes/no}
+```
+
+Ask using ask_user_input: `Yes — generate everything` / `Change something first`
+
+**Do not generate a single token until the user confirms.**
+
+---
+
+## PHASE 3 — GENERATION
+
+Read ALL 5 reference files before writing any JSON. Generate ZIPs in import order.
+
+### Token density — do not be minimalist
+- **Primitives:** full colour palette + alpha variants (Razorpay flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
+- **Theme:** every surface/text/border/interactive/feedback/overlay group, all states + shadow colour tokens
+- **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
+- **Density:** padding (x/y/top/bottom/left/right only — 6 directional tokens, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
+- **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
+- **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → Theme
+- **Component Colors:** every component × every variant × every state × every layer + icon duotone tokens
+- **Component Dimensions:** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
+
+### Mode file naming (critical — no "Value" names)
+- Primitives: `primitives.tokens.json` with `"modeName": "primitives"`
+- Typography: `typography.tokens.json` with `"modeName": "typography"`
+- Effects: `effects.tokens.json` with `"modeName": "effects"`
+- Semantic: `semantic.tokens.json` with `"modeName": "semantic"`
+- Component Colors: `component-colors.tokens.json` with `"modeName": "component-colors"`
+- Component Dimensions: `component-dimensions.tokens.json` with `"modeName": "component-dimensions"`
+- All other collections use their natural mode names (light, dark, mobile, compact etc.)
+
+### Default modes
+- Theme: light is default
+- Responsive: mobile is default
+- Density: comfortable is default
+
+Run the validation checklist from `references/03-json-format.md` before finalising each ZIP.
+
+### Token count reporting — required after generation
+
+After generating all ZIPs, report a count table to the user so they can cross-check the import. Count **unique token paths** (one token = one line item in Figma's variable panel, regardless of how many modes it has). Do not multiply by mode count.
+
+Example format:
+```
+TOKENS GENERATED
+══════════════════════════════════
+Collection          Tokens
+──────────────────────────────────
+Primitives          142
+Theme               87
+Responsive          54
+Density             14
+Layout              5
+Effects             18
+Typography          72
+Semantic            48       (4-layer only)
+Component Colors    186
+Component Dimensions 28
+──────────────────────────────────
+Total               654
+══════════════════════════════════
+```
+Tell the user: "These counts reflect unique tokens (one per row in Figma), not multiplied by modes."
+
+---
+
+
+> Import, scoping, and collection reference in `SKILL-C.md`.
