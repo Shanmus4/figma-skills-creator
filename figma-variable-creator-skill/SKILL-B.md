@@ -198,17 +198,53 @@ Read ALL 5 reference files before writing any JSON.
 **OUTPUT CONSTRAINT CRITICAL RULE:**
 You must ONLY output valid `.zip` files containing the structured JSON. NEVER output `.skill` files or dump massive scripts to the user. Do not wrap the output in proprietary skill abstractions.
 
-Generate the `.zip` files in import order.
+> **CRITICAL PERFORMANCE RULE:** Do NOT attempt to write one giant script or generate all ZIP files in a single turn. Generating 700+ tokens at once will cause you to time out and fail. 
+> You must strictly break the generation across multiple turns as instructed below. You must stop generating and wait for the user to reply "Next" before proceeding to the next turn. Do not write extensive `<thinking>` blocks. Execute immediately.
 
-### Token density — do not be minimalist
-- **Primitives:** full colour palette + alpha variants (Razorpay flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
-- **Theme:** every surface/text/border/interactive/feedback/overlay group, all states + shadow colour tokens
-- **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
-- **Density:** padding (x/y/top/bottom/left/right only — 6 directional tokens, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
-- **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
-- **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → Theme
-- **Component Colors:** every component × every variant × every state × every layer + icon duotone tokens
-- **Component Dimensions:** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
+> **ALIAS INTEGRITY RULE — ZERO BROKEN REFERENCES:** Every alias in a downstream collection (Theme, Responsive, Density, Effects, Typography, Semantic, Component Colors, Component Dimensions) MUST point to a token that already exists in its parent collection. If a downstream token needs a Primitive value that wasn't generated yet, you MUST add that token to Primitives first. Never ship a ZIP containing an alias whose target does not exist — Figma will silently fail on import.
+
+---
+
+### TURN A — Core Foundations
+**Before writing Primitives:** Plan all downstream alias targets (Theme, Responsive, Density, Effects, Typography, Components). Backfill any missing primitive tokens so every future alias has a valid target. Generate Primitives LAST-MILE — after planning all downstream values, add any missing primitive tokens before writing the ZIP.
+
+Generate and output the ZIP files for these collections ONLY:
+1. **Primitives:** full colour palette + alpha variants (Razorpay flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
+2. **Theme:** every surface/text/border/interactive/feedback/overlay group, all states + shadow colour tokens
+
+*Stop here. Provide the ZIPs and explicitly tell the user: "Type **Next** to generate structural collections (Responsive, Density, Layout, Effects)."*
+
+---
+
+### TURN B — Structural Collections
+*(Wait for user to type "Next")*
+
+Generate and output the ZIP files for these collections ONLY:
+1. **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
+2. **Density:** padding (x/y/top/bottom/left/right only — 6 directional tokens, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
+3. **Layout:** Layout structural variables (if selected)
+4. **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
+
+*Stop here. Provide the ZIPs and explicitly tell the user: "Type **Next** to generate the final component and semantic collections."*
+
+---
+
+### TURN C — Components & Semantics
+*(Wait for user to type "Next")*
+
+Generate and output the ZIP files for these collections ONLY:
+1. **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → Theme
+2. **Semantic (if applicable):** as per 4-layer architecture rules
+3. **Component Colors:** every component × every variant × every state × every layer + icon duotone tokens
+4. **Component Dimensions:** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
+
+*Stop here. Provide the ZIPs and automatically proceed to Turn D.*
+
+---
+
+### Token count reporting (TURN D)
+
+After delivering Turn C ZIPs, report a count table to the user so they can cross-check the import. Count **unique token paths** (one token = one line item in Figma's variable panel, regardless of how many modes it has). Do not multiply by mode count.
 
 ### Mode file naming (critical — no "Value" names)
 - Primitives: `primitives.tokens.json` with `"modeName": "primitives"`
