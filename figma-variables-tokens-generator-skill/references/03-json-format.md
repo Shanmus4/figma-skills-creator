@@ -1,6 +1,7 @@
-# JSON Format Reference
-
 ## Token Object Structure
+
+> [!IMPORTANT]
+> **LITERAL TRANSLATION RULE:** Do NOT attempt to "optimize" or "rewrite" the JSON structure. You must use the EXACT keys and nesting shown in the samples below. If a sample shows `$extensions`, do not omit it. If a sample shows `targetVariableSetName`, it must be present. You are a literal translator, not an architect.
 
 ### Primitive token (hardcoded, no alias, no scope key)
 ```json
@@ -19,14 +20,14 @@
 ```json
 {
   "$type": "color",
-  "$value": { "colorSpace": "srgb", "components": [0.1, 0.1, 0.1], "alpha": 1, "hex": "#1A1A1A" },
+  "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1, "hex": "#000000" },
   "$extensions": {
     "com.figma.variableId": "VariableID:40:8",
-    "com.figma.scopes": ["TEXT_FILL"],
-    "com.figma.codeSyntax": { "WEB": "--theme-text-primary" },
+    "com.figma.scopes": ["FRAME_FILL", "SHAPE_FILL"],
+    "com.figma.codeSyntax": { "WEB": "--theme-surface-brand" },
     "com.figma.aliasData": {
       "targetVariableId": "VariableID:10:5",
-      "targetVariableName": "color/grey/900",
+      "targetVariableName": "color/orange/500",
       "targetVariableSetName": "Primitives"
     }
   }
@@ -37,7 +38,7 @@
 ```json
 {
   "$type": "number",
-  "$value": 16,
+  "$value": 0,
   "$extensions": {
     "com.figma.variableId": "VariableID:50:12",
     "com.figma.scopes": ["GAP"],
@@ -45,6 +46,185 @@
     "com.figma.aliasData": {
       "targetVariableId": "VariableID:10:42",
       "targetVariableName": "spacing/16",
+      "targetVariableSetName": "Primitives"
+    }
+  }
+}
+```
+
+> **$value is MANDATORY (CRITICAL RULE):**
+> `$value` is required on EVERY token without exception — including alias/middle-chain tokens. 
+> 
+> *"`$value` on alias tokens is a placeholder. It must always be present and valid but Figma ignores it — `aliasData` is what drives the actual resolved value. Never omit `$value` even on alias tokens."*
+> 
+> - **Why?** Figma silently drops any collection containing tokens with a missing `$value` field.
+> - **Real Value Rule (Safety First):** 
+>   - **Numbers / Strings**: Always use the **Actual Resolved Value** (e.g. `12` or `"Inter"`). If alias resolution fails, Figma may fallback to this value.
+>   - **Colors**: Use a black placeholder object `{..., "hex": "#000000"}`.
+> - **Direct Parent Ownership (Branching Rule)**: Tokens MUST alias their **direct parent** in the chain. 
+  - **4-layer**: Component Colors → Aliases `Semantic`
+  - **2-layer / 3-layer**: Component Colors → Aliases `Theme` (skips non-existent Semantic)
+  - **Typography (Triple Alias Rule)**: 
+    - `fontSize`, `lineHeight`, `letterSpacing` → Alias **`Responsive`**
+    - `fontFamily`, `fontWeight` → Alias **`Primitives`**
+    - `color/*` → Alias **`Theme`**
+- **String Tokens**: REQUIRE `"com.figma.type": "string"` at every layer. Unlike other primitives, **Primitive String Tokens DO have scopes** (FONT_FAMILY, FONT_STYLE).
+- **Figma Behavior**: Figma resolves the real data via `aliasData`. The `$value` exists for structural validity and safe fallback. No curly-brace syntax or hex inheritance is used.
+
+## Complete Alias Chain Samples
+
+Follow these full structural patterns. Each layer aliases its **direct parent**.
+
+### 1. Color Chain (4-Layer: Primitives → Theme → Semantic → Components)
+
+**Primitives (Value)**
+```json
+"orange-500": {
+  "$type": "color",
+  "$value": { "colorSpace": "srgb", "components": [0.918, 0.345, 0.047], "alpha": 1, "hex": "#EA580C" },
+  "$extensions": {
+    "com.figma.variableId": "VariableID:10:5",
+    "com.figma.hiddenFromPublishing": true,
+    "com.figma.codeSyntax": { "WEB": "--primitives-color-orange-500" }
+  }
+}
+```
+
+**Theme (Aliases Primitives)**
+```json
+"surface-brand": {
+  "$type": "color",
+  "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1, "hex": "#000000" },
+  "$extensions": {
+    "com.figma.variableId": "VariableID:40:8",
+    "com.figma.scopes": ["FRAME_FILL", "SHAPE_FILL"],
+    "com.figma.codeSyntax": { "WEB": "--theme-surface-brand" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:10:5",
+      "targetVariableName": "color/orange/500",
+      "targetVariableSetName": "Primitives"
+    }
+  }
+}
+```
+
+**Semantic (Aliases Theme)**
+```json
+"action-primary": {
+  "$type": "color",
+  "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1, "hex": "#000000" },
+  "$extensions": {
+    "com.figma.variableId": "VariableID:60:12",
+    "com.figma.scopes": ["FRAME_FILL", "SHAPE_FILL"],
+    "com.figma.codeSyntax": { "WEB": "--semantic-action-primary-default" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:40:8",
+      "targetVariableName": "surface/brand",
+      "targetVariableSetName": "Theme"
+    }
+  }
+}
+```
+
+**Component Colors (Aliases Semantic)**
+```json
+"button-bg": {
+  "$type": "color",
+  "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1, "hex": "#000000" },
+  "$extensions": {
+    "com.figma.variableId": "VariableID:70:44",
+    "com.figma.scopes": ["FRAME_FILL", "SHAPE_FILL"],
+    "com.figma.codeSyntax": { "WEB": "--color-button-primary-default-background" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:60:12",
+      "targetVariableName": "action/primary/default",
+      "targetVariableSetName": "Semantic"
+    }
+  }
+}
+```
+
+### 2. Number Chain (3-Layer: Primitives → Density → Components)
+
+**Primitives (Value)**
+```json
+"spacing-16": {
+  "$type": "number",
+  "$value": 16,
+  "$extensions": {
+    "com.figma.variableId": "VariableID:10:42",
+    "com.figma.hiddenFromPublishing": true,
+    "com.figma.codeSyntax": { "WEB": "--primitives-spacing-16" }
+  }
+}
+```
+
+**Density (Aliases Primitives)**
+```json
+"padding-md": {
+  "$type": "number",
+  "$value": 16,
+  "$extensions": {
+    "com.figma.variableId": "VariableID:50:7",
+    "com.figma.scopes": ["GAP"],
+    "com.figma.codeSyntax": { "WEB": "--density-padding-md" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:10:42",
+      "targetVariableName": "spacing/16",
+      "targetVariableSetName": "Primitives"
+    }
+  }
+}
+```
+
+**Component Dimensions (Aliases Density)**
+```json
+"button-padding": {
+  "$type": "number",
+  "$value": 16,
+  "$extensions": {
+    "com.figma.variableId": "VariableID:80:3",
+    "com.figma.scopes": ["GAP"],
+    "com.figma.codeSyntax": { "WEB": "--dimensions-button-padding" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:50:7",
+      "targetVariableName": "padding/md",
+      "targetVariableSetName": "Density"
+    }
+  }
+}
+```
+
+### 3. String Chain (2-Layer: Primitives → Typography)
+
+**Primitives (Value + Scope + Type)**
+```json
+"font-sans": {
+  "$type": "string",
+  "$value": "Inter",
+  "$extensions": {
+    "com.figma.variableId": "VariableID:10:500",
+    "com.figma.hiddenFromPublishing": true,
+    "com.figma.type": "string",
+    "com.figma.scopes": ["FONT_FAMILY"],
+    "com.figma.codeSyntax": { "WEB": "--primitives-font-family-sans" }
+  }
+}
+```
+
+**Typography (Aliases Primitives + Type)**
+```json
+"body-font": {
+  "$type": "string",
+  "$value": "Inter",
+  "$extensions": {
+    "com.figma.variableId": "VariableID:25:10",
+    "com.figma.type": "string",
+    "com.figma.scopes": ["FONT_FAMILY"],
+    "com.figma.codeSyntax": { "WEB": "--typography-body-font-family" },
+    "com.figma.aliasData": {
+      "targetVariableId": "VariableID:10:500",
+      "targetVariableName": "font/family/sans",
       "targetVariableSetName": "Primitives"
     }
   }
@@ -66,6 +246,12 @@
 - `targetVariableId` — the `com.figma.variableId` of the target token
 - `targetVariableName` — path using **forward slashes only**, mirroring JSON nesting depth. `sdfdsf/Color`, `color/black/opacity/24`, `spacing/16`
 - `targetVariableSetName` — exact, un-numbered collection name: `Primitives`, `Theme`, `Component Colors`. **CRITICAL:** Do NOT prepend the import order number to this field (e.g. use `Primitives` not `1. Primitives`), otherwise Figma aliases will break.
+
+> **CRITICAL ALIAS RULE: NO PREFIX CONTAMINATION**
+> `targetVariableName` must NEVER include the collection name as a prefix. 
+> - ✗ **BROKEN**: `"targetVariableName": "theme/shadow/sm/color", "targetVariableSetName": "Theme"`
+> - ✓ **CORRECT**: `"targetVariableName": "shadow/sm/color", "targetVariableSetName": "Theme"`
+> If your data map or vmap contains the collection name (e.g. `theme/surface/default`), you MUST strip the `theme/` prefix before writing to `targetVariableName`. The set is already defined by `targetVariableSetName`.
 
 **Every non-primitive token must have aliasData.** No exceptions. Dark mode tokens, Typography tokens, Component Colors, Effects numeric tokens — all must have aliasData.
 
@@ -135,22 +321,41 @@ For no-mode collections (Primitives, Typography, Semantic, Component Colors): `"
 
 Increment the second number per token. Each mode in a collection shares the same token IDs — the same `variableId` appears in light.tokens.json and dark.tokens.json for the same token. Do NOT use the same ID for different tokens across collections.
 
-## ZIP File Structure
+## ZIP File Structure (CRITICAL)
 
-**CRITICAL RULE: INNER ZIP NUMBERING**  
-To ensure the designer imports collections in the exact correct order without prepending numbers to the actual Figma collection name, you must generate a master `.zip` widget but name the inner collection ZIPs sequentially based on their import requirement.
+To ensure the designer imports collections in the exact correct order, you must generate a **single master `.zip` file**. Inside this ZIP, you must create **folders** named with a numeric prefix. Each folder represents one collection and contains the relevant mode JSON files.
+
+**Format: `Master.zip` → `{Number}. {Collection Name}/` → `mode.tokens.json`**
 
 ```
-1. Primitives.zip       → Value.tokens.json
-2. Theme.zip            → light.tokens.json, dark.tokens.json
-3. Responsive.zip       → mobile.tokens.json, tablet.tokens.json, desktop.tokens.json
-4. Density.zip          → compact.tokens.json, comfortable.tokens.json, spacious.tokens.json
-5. Layout.zip           → xs.tokens.json, sm.tokens.json, md.tokens.json, lg.tokens.json, xl.tokens.json, xxl.tokens.json
-6. Effects.zip          → effects.tokens.json
-7. Typography.zip       → typography.tokens.json
-8. Semantic.zip         → semantic.tokens.json
-9. ComponentColors.zip  → component-colors.tokens.json
-10. ComponentDimensions.zip → mobile.tokens.json, tablet.tokens.json, desktop.tokens.json
+design-tokens.zip
+├── 1. Primitives/
+│   └── primitives.tokens.json
+├── 2. Theme/
+│   ├── light.tokens.json
+│   └── dark.tokens.json
+├── 3. Responsive/
+│   ├── mobile.tokens.json
+│   ├── tablet.tokens.json
+│   └── desktop.tokens.json
+├── 4. Density/
+│   ├── compact.tokens.json
+│   ├── comfortable.tokens.json
+│   └── spacious.tokens.json
+├── 5. Layout/
+│   ├── xs.tokens.json
+│   ├── sm.tokens.json
+│   └── ... (all breakpoints)
+├── 6. Effects/
+│   └── effects.tokens.json
+├── 7. Typography/
+│   └── typography.tokens.json
+├── 8. Semantic/
+│   └── semantic.tokens.json
+├── 9. Component Colors/
+│   └── component-colors.tokens.json
+└── 10. Component Dimensions/
+    └── component-dimensions.tokens.json
 ```
 
 ## Python ZIP Builder
@@ -168,6 +373,7 @@ def write_zip(zip_name: str, files: dict):
 ## Validation Checklist — Run Before Finalising Each ZIP
 
 ### ALL collections
+- [ ] Every token has `$value` — including alias tokens in Theme, Semantic, Responsive, Density, Effects, Typography, Component Colors, Component Dimensions. No exceptions.
 - [ ] Every non-primitive token has `com.figma.aliasData` with all 3 required fields
 - [ ] `targetVariableName` uses slashes: `color/grey/900` not `color.grey.900`
 - [ ] `targetVariableSetName` matches the un-numbered collection name exactly (e.g. `Primitives` — never `1. Primitives`)
@@ -175,6 +381,33 @@ def write_zip(zip_name: str, files: dict):
 - [ ] All color `$value` are objects — never bare hex strings
 - [ ] All string tokens have `"com.figma.type": "string"`
 - [ ] All files end with `$metadata.modeName`
+- [ ] **NO targetVariableName contains a collection prefix** (e.g. no `theme/` or `semantic/` inside the path)
+- [ ] **ID STABILITY CHECK**: Every mode file in a multi-mode collection (Theme, Responsive, Density, Layout) uses the EXACT same `variableId` for the same token path.
+- [ ] **Zero id:0:0 references**: Every alias ID must be a real, generated ID from the registry.
+
+> [!CAUTION]
+> **NO PROPRIETARY DUMPING**: Never output JSON in a raw markdown code block. It must ALWAYS be delivered inside the final ZIP file structure. Dumping tokens in the chat window causes context truncation and broken files.
+
+### Python Pre-ZIP Validation Script (Safety Gate)
+Run this check inside your script before calling `build_zip`:
+```python
+def validate_tokens(files):
+    sets = ["Primitives", "Theme", "Responsive", "Density", "Layout", "Effects", "Typography", "Semantic", "Component Colors", "Component Dimensions"]
+    for filename, data in files.items():
+        for token in data.values():
+            if isinstance(token, dict) and "$extensions" in token:
+                ext = token["$extensions"]
+                if "com.figma.aliasData" in ext:
+                    name = ext["com.figma.aliasData"]["targetVariableName"]
+                    # Bug 1 Fix: Verify no prefix contamination
+                    for s in sets:
+                        if name.startswith(s.lower() + "/"):
+                            raise ValueError(f"CRITICAL: Token path '{name}' contains illegal collection prefix '{s}/'")
+                # Bug 2 Fix: Verify syntax purity
+                syntax = ext.get("com.figma.codeSyntax", {}).get("WEB", "")
+                if "  " in syntax:
+                    raise ValueError(f"CRITICAL: Double-space detected in codeSyntax: {syntax}")
+```
 
 ### Primitives
 - [ ] Zero tokens have `com.figma.scopes` key (absent entirely — not empty array)
@@ -204,7 +437,6 @@ def write_zip(zip_name: str, files: dict):
 - [ ] Shadow colour tokens → EFFECT_COLOR, alias Primitives
 - [ ] Shadow numeric tokens (x, y, blur, spread) → EFFECT_FLOAT, alias Primitives shadow geometry
 - [ ] Blur tokens → EFFECT_FLOAT, alias Primitives blur
-- [ ] Variable IDs are unique per mode (NOT reused across light and dark)
 
 ### Layout
 - [ ] All tokens have `["WIDTH_HEIGHT"]` scope

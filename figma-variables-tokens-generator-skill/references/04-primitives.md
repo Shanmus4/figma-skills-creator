@@ -6,8 +6,8 @@
 3. `codeSyntax.WEB` on every token
 4. Color values are objects (colorSpace/components/alpha/hex) — never hex strings
 5. Zero aliasData on any token
-6. Mode file name: `primitive-value.tokens.json` — NOT `Value.tokens.json`
-7. `$metadata.modeName` must be `"primitive-value"` (not `"Value"`)
+6. Mode file name: `primitives.tokens.json` — NOT `Value.tokens.json`
+7. `$metadata.modeName` must be `"primitives"` (not `"Value"`)
 
 ---
 
@@ -114,7 +114,9 @@ All font tokens MUST nest under `font/`. NOT as separate top-level groups.
     "20": { "$type": "number", "$value": 20, ... },
     "22": { "$type": "number", "$value": 22, ... },
     "24": { "$type": "number", "$value": 24, ... },
+    "26": { "$type": "number", "$value": 26, ... },
     "28": { "$type": "number", "$value": 28, ... },
+    "30": { "$type": "number", "$value": 30, ... },
     "32": { "$type": "number", "$value": 32, ... },
     "36": { "$type": "number", "$value": 36, ... },
     "40": { "$type": "number", "$value": 40, ... },
@@ -175,7 +177,7 @@ Shades per family: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900
 Alpha siblings: a8, a16, a24, a32, a40, a48, a56, a64 (at same level as shades)
 
 ### spacing/{value}
-0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96
+0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160
 
 ### size/{value} (component heights, icon sizes)
 16, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 80, 96, 120, 160

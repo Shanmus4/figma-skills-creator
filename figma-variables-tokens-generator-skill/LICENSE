@@ -1,0 +1,25 @@
+# Figma Variables Tokens Generator Skill License
+Copyright (c) 2026 Shanmugha Sundaram Srinivasan. All rights reserved.
+
+The "Figma Variables Tokens Generator Skill" (the "Skill"), including all instructions, references, and logic contained within this directory, is the intellectual property of Shanmugha Sundaram Srinivasan.
+
+## 1. GRANT OF LICENSE
+Subject to the terms and conditions of this License, the Copyright Holder hereby grants you a limited, non-exclusive, non-transferable, and non-sublicensable license to:
+(a) Access and view the source files of the Skill.
+(b) Use the Skill personally or within your organization for the purpose of generating Figma design tokens.
+
+## 2. RESTRICTIONS
+You may NOT:
+(a) Sell, rent, lease, sublicense, or otherwise commercially exploit the Skill or its instructions.
+(b) Publicly redistribute, publish, or mirror the Skill's files or any modified versions thereof without explicit written permission from the Copyright Holder.
+(c) Replicate the architectural logic, prompt sequencing, or specific interview structure for use in competitive products or publicly available AI skills.
+(d) Claim original authorship or remove any copyright notices from the Skill files.
+
+## 3. DERIVATIVE WORKS
+You may make local modifications for your own private use. However, you may NOT distribute these derivative works, publicly or commercially, even if modified.
+
+## 4. INTELLECTUAL PROPERTY
+The unique methodology of "Phased Generation," "Sequential Interview Logic," and "Dynamic Dropdown Injection" as implemented in these instructions are protected as original works of authorship.
+
+## 5. NO WARRANTY
+THE SKILL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SKILL OR THE USE OR OTHER DEALINGS IN THE SKILL.

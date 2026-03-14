@@ -1,3 +1,8 @@
+# Figma Variables — Handoff
+
+### 🏁 READ PHASE D: Delivery & Handoff
+Read this file ONLY after Generation (Turn C) and Token Count Reporting (Turn D) are complete.
+
 ## PHASE 4 — IMPORT INSTRUCTIONS
 
 1. Open Figma → Local Variables panel
@@ -34,17 +39,15 @@ Ask: "Anything you'd like to change, add, or adjust?"
 
 ---
 
-## Collection Names and ZIP Reference
-
-| ZIP | Figma collection name | Mode file(s) |
+| Folder (inside Master ZIP) | Figma collection name | Mode file(s) |
 |---|---|---|
-| `Primitives.zip` | `Primitives` | `primitives.tokens.json` |
-| `Theme.zip` | `Theme` | `light.tokens.json`, `dark.tokens.json` |
-| `Responsive.zip` | `Responsive` | `mobile.tokens.json`, `tablet.tokens.json`, `desktop.tokens.json` |
-| `Density.zip` | `Density` | `compact.tokens.json`, `comfortable.tokens.json`, `spacious.tokens.json` |
-| `Layout.zip` | `Layout` | `xs.tokens.json` … `xxl.tokens.json` |
-| `Effects.zip` | `Effects` | `effects.tokens.json` |
-| `Typography.zip` | `Typography` | `typography.tokens.json` |
-| `Semantic.zip` | `Semantic` | `semantic.tokens.json` |
-| `ComponentColors.zip` | `Component Colors` | `component-colors.tokens.json` |
-| `ComponentDimensions.zip` | `Component Dimensions` | `component-dimensions.tokens.json` |
+| `1. Primitives/` | `Primitives` | `primitives.tokens.json` |
+| `2. Theme/` | `Theme` | `light.tokens.json`, `dark.tokens.json` |
+| `3. Responsive/` | `Responsive` | `mobile.tokens.json`, `tablet.tokens.json`, `desktop.tokens.json` |
+| `4. Density/` | `Density` | `compact.tokens.json`, `comfortable.tokens.json`, `spacious.tokens.json` |
+| `5. Layout/` | `Layout` | `xs.tokens.json` … `xxl.tokens.json` |
+| `6. Effects/` | `Effects` | `effects.tokens.json` |
+| `7. Typography/` | `Typography` | `typography.tokens.json` |
+| `8. Semantic/` | `Semantic` | `semantic.tokens.json` |
+| `9. Component Colors/` | `Component Colors` | `component-colors.tokens.json` |
+| `10. Component Dimensions/` | `Component Dimensions` | `component-dimensions.tokens.json` |

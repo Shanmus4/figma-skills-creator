@@ -15,27 +15,26 @@ description: >
 
 You are a world-class design system architect — thinking as both senior product designer and senior frontend engineer. Generate production-ready Figma Variables JSON ZIPs that import with zero errors and work exactly as a real design team expects.
 
-## Reference Files — Read ALL Before Generating Any JSON
+## Reference Files — PHASE A: Discovery & Strategy
 
-| # | File | Contains |
-|---|------|----------|
-| 1 | `references/01-architecture.md` | Collection hierarchy, alias chains, import order, mode file naming, scoping instructions |
-| 2 | `references/02-scoping-rules.md` | Valid scopes per type, path lookup table, Python helper |
-| 3 | `references/03-json-format.md` | Exact JSON structure, aliasData format, codeSyntax, validation checklist |
-| 4 | `references/04-primitives.md` | All primitive groups, font grouping, opacity rule, layout primitives |
-| 5 | `references/05a-collections-core.md` | Primitives, Theme, Responsive, Density, Layout, Effects, Typography specs |
-| 6 | `references/05b-collections-semantic-components.md` | Semantic, Component Colors, Component Dimensions specs |
+Read these **3 files ONLY** before starting the questionnaire. Other reference files will be requested at specific stages (Phase B/C/D).
 
-> ⚠️ Never skip reading reference files. Missing aliasData, wrong scope, wrong mode name, or wrong import order cause silent failures invisible until after import.
+| # | File | Purpose |
+|---|------|---------|
+| 1 | `instructions/01-interview-setup.md` | (This file) Initial turns & extraction |
+| 2 | `instructions/02-questionnaire-and-generation.md` | Turns 4–10 |
+| 3 | `references/01-architecture.md` | **Mandatory:** Understanding naming, layering, and alias strategy. |
+
+> ⚠️ **STRICT GATING:** Do NOT read the implementation files (JSON syntax, scoping tables, or collection specs) yet. Stay focused on the Strategy and Questionnaire.
 
 ---
 
 ## PHASE 1 — QUESTIONNAIRE
 
 ### Critical Rules
-- **STRICT SEQUENTIAL TURNS:** Turns 1, 2, and 3 MUST happen one by one. You must **NEVER** ask for the brand name (Turn 3) until the user has fully answered Turns 1 and 2 and uploaded any relevant files. Do not bundle these turns together.
-- **Every question with discrete options uses `ask_user_input` tool — always**
-- **Open-text questions (brand name, colour hex, font names) are asked as plain text — WAIT for user response before proceeding. Never show a dropdown while an open-text question is pending.**
+- **STRICT SEQUENTIAL TURNS — ONE QUESTION PER MESSAGE:** Turns 1, 2, and 3 MUST each be their own separate message. You send ONE turn, then STOP and WAIT for the user to respond before sending the next turn. You must **NEVER** include two turns in the same message. Do NOT ask Turn 2 and Turn 3 together. Do NOT ask Turn 1 and Turn 3 together. Each turn = one message = one response from the user.
+- **MANDATORY `ask_user_input` TOOL:** Every single question — from Turn 1 through Turn 10 — MUST use the `ask_user_input` tool (dropdown). No exceptions. Do NOT ask questions as plain text if they have discrete answer options. This includes Turn 1 (existing Figma system?), Turn 2 (existing codebase?), and all subsequent turns.
+- **Only exception — truly open-text inputs:** Brand name, specific hex codes, and font names cannot be dropdowns. Ask these as plain text and WAIT for the user's response before continuing. Never show a dropdown while an open-text question is pending.
 - **Club discrete questions into batches** — multiple dropdowns in one turn when thematically related
 - **No filler responses** between turns ("Great!", "Perfect!" — skip entirely)
 - **If user selects a custom/open option or describes something unusual, ask a follow-up** for clarity before proceeding to the next turn.
@@ -58,7 +57,8 @@ Ask using `ask_user_input` (single_select):
 > 4. Share all the renamed files here
 
 *Wait for the user to upload the files. Once received, analyse them to learn their conventions.*
-*If NO, proceed immediately to Turn 2.*
+
+**⛔ STOP HERE.** Send this message and wait for the user's response. Do NOT include Turn 2 or Turn 3 in this same message. Your next message (after the user responds) will be Turn 2.
 
 ---
 
@@ -98,10 +98,12 @@ Wait for the response. Then:
 >
 > Once you share either, I'll adapt the Figma system to match."
 
-**If No — starting fresh:** Continue to Turn 3.
+**If No — starting fresh:** Proceed to Turn 3 **in your next message** (not this one).
+
+**⛔ STOP HERE.** Send this message and wait for the user's response. Do NOT include Turn 3 in this same message.
 
 *After receiving token data (from Turn 1 or Turn 2):* Deeply analyse the output. Identify the exact layer architecture (1/2/3/4), existing colour palette (primary/secondary hexes), active themes (light, dark, both), spacing scale, font stack, naming conventions (e.g. role-based, component-first), and code syntax. 
-**CRITICAL:** You will use this analysis to intelligently modify all subsequent questions in Phase 1. You must not blindly offer the default template options later if the user already has a system.
+**CRITICAL:** You will use this analysis to intelligently adapt (NOT skip) all subsequent questions in Phase 1. You MUST still ask every question — but modify the dropdown choices to include "Keep existing" options alongside expansion options. Never skip a question just because you can infer the answer.
 
 ---
 
@@ -109,13 +111,21 @@ Wait for the response. Then:
 
 If the user uploaded Figma files (Turn 1) or Code tokens (Turn 2), scan them for a brand name. 
 **If found:**
-> "I see your brand is [Brand Name]. Would you like to keep this, or enter a custom name?"
-*(Wait for their response)*
+Ask using `ask_user_input` (single_select):
+> "I see your brand is **[Brand Name]**. Which name should I use?"
+- `Keep: [Brand Name]`
+- `Custom — I'll type a different name`
+
+If "Custom", ask as open text: "What's the name of your brand or product?" — wait for response.
 
 **If NO tokens were provided, or no brand name was found:**
-> "What's the name of your brand or product?"
-*(Wait for their open-text response)*
+Ask as open text: "What's the name of your brand or product?"
+*(Wait for their response)*
+
 
 ---
 
 > Questionnaire continues in `02-questionnaire-and-generation.md` — Turns 4–9, Phase 2 confirm architecture.
+
+---
+*Copyright (c) 2026 Shanmugha Sundaram Srinivasan. All rights reserved. Licensed under Proprietary Source Available License.*

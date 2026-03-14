@@ -147,6 +147,7 @@ responsive/font/lineHeight/body         mobile→20  tablet→22  desktop→24
 responsive/font/lineHeight/body-sm      mobile→18  tablet→18  desktop→20
 responsive/font/lineHeight/label        mobile→18  tablet→18  desktop→20
 responsive/font/lineHeight/caption      mobile→16  tablet→16  desktop→16
+responsive/font/lineHeight/overline     mobile→14  tablet→14  desktop→16
 responsive/font/lineHeight/code         mobile→18  tablet→18  desktop→20
 ```
 
@@ -157,6 +158,19 @@ responsive/font/letterSpacing/heading     mobile→0   tablet→-1  desktop→-1
 responsive/font/letterSpacing/body        mobile→0   tablet→0   desktop→0
 responsive/font/letterSpacing/caption     mobile→1   tablet→1   desktop→1
 responsive/font/letterSpacing/overline    mobile→2   tablet→2   desktop→2
+
+**RC4: Extended Roles letterSpacing (CRITICAL):**
+If use chooses Extended Scale, you MUST generate unique Responsive paths for every role to prevent ID collapsing:
+- `display-sm` → -2
+- `heading-lg` → -1
+- `heading-sm` → 0
+- `body-strong` → 0
+- `label-lg` → 0
+- `label` → 0
+- `label-sm` → 1
+- `numeric` → 0
+- `caption` → 1
+- `overline` → 2
 ```
 
 ### radius/* → CORNER_RADIUS
@@ -282,6 +296,9 @@ Variable IDs: same variableId in the single effects.tokens.json file. No mode du
 **Aliases:** Responsive (numerical values) + Primitives (font/family, font/weight) + Theme (colour tokens)
 
 Typography colour tokens alias Theme (not Semantic) because Typography is a cross-cutting concern used across all layers.
+
+> [!IMPORTANT]
+> **BACKFILLING CHECK:** Before aliasing any `fontSize`, `lineHeight`, or `letterSpacing` value from `Responsive`, verify that the raw numerical value exists in your **Primitives** collection (e.g. if `subheading` mobile needs `26px`, `font/lineHeight/26` MUST exist in Primitives). If missing, add it to Primitives first.
 
 ### Tokens per role — numerical values alias Responsive
 ```

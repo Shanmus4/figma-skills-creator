@@ -25,26 +25,22 @@
 primitives/color/blue/500          hardcoded #3B82F6, NO scope
         ↓
 Theme: surface/primary             FRAME_FILL+SHAPE_FILL, aliases Primitives
-        ↓ (4-layer only)
 Semantic: surface/primary          FRAME_FILL+SHAPE_FILL, aliases Theme
         ↓
 Component Colors: color/button/primary/default/background
-                                   FRAME_FILL+SHAPE_FILL ← picker tip
+                                   FRAME_FILL+SHAPE_FILL
+                                   Aliases Semantic (4-layer) 
+                                   OR Theme (2/3-layer) ← picker tip
 
-── TYPOGRAPHY CHAIN ──────────────────────────────────────
-primitives/font/size/16            hardcoded 16, NO scope
-        ↓
-Responsive: font/size/body         FONT_SIZE — mobile=14, tablet=15, desktop=16 ← picker tip
-                                   (Typography aliases this)
+── TYPOGRAPHY CHAIN (Triple Alias Rule) ──────────────────
+1. Numerical (fontSize, lineHeight, letterSpacing):
+   primitives/font/size/16 → Responsive: font/size/body → Typography: body/fontSize
 
-primitives/font/family/sans        hardcoded "Inter", NO scope
-        ↓
-Typography: body/fontFamily        FONT_FAMILY, aliases Primitives directly ← picker tip
-            (font/family and font/weight always alias Primitives — NOT Responsive)
+2. Strings (fontFamily, fontWeight):
+   primitives/font/family/sans → Typography: body/fontFamily (Direct to Primitives)
 
-Theme: text/primary                TEXT_FILL, aliases Primitives
-        ↓
-Typography: color/primary          TEXT_FILL, aliases Theme ← picker tip
+3. Colors:
+   primitives/color/grey/900 → Theme: text/primary → Typography: color/primary
 
 ── SPACING / DENSITY CHAIN ───────────────────────────────
 primitives/spacing/16              hardcoded 16, NO scope

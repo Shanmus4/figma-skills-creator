@@ -41,6 +41,7 @@ If you define extended typography roles (display-sm, heading-lg, body-strong etc
 ```
 semantic/surface/page        FRAME_FILL+SHAPE_FILL → theme/surface/page
 semantic/surface/card        FRAME_FILL+SHAPE_FILL → theme/surface/default
+semantic/surface/raised      FRAME_FILL+SHAPE_FILL → theme/surface/raised
 semantic/surface/modal       FRAME_FILL+SHAPE_FILL → theme/surface/overlay
 semantic/surface/input       FRAME_FILL+SHAPE_FILL → theme/surface/sunken
 semantic/text/primary        TEXT_FILL → theme/text/primary

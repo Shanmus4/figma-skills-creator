@@ -1,8 +1,11 @@
 > **DYNAMIC INTELLIGENT DROPDOWNS (CRITICAL RULE):**
 > If the user provided existing tokens (from Figma or Code in Turns 1/2), you MUST intelligently adapt the questions in Turns 4-9 based on your analysis. 
+> - **NEVER SKIP A QUESTION.** Every question in Turns 4-9 MUST still be asked, even if you can infer the answer. The user must always have the chance to confirm or change.
 > - **Contextualize the question:** Tell the user what you found. (e.g., *"I see your current system only has a Light mode."* or *"I see these tokens came from a Web project."*)
 > - **Inject dynamic choices:** Modify your dropdown choices to include keeping their existing setup versus expanding/changing it. (e.g., `Keep existing: Light mode only`, `Expand to: Light + Dark modes`).
-> - Apply this intelligence to Product Type (Q2), Colours (Q3-Q6), Layer Architecture (Q7), Naming Conventions (Q18), and Code Syntax (Q17). Do NOT just ask the default template questions if you already know the answer from their files.
+> - **Architectural Dependencies:** Some questions depend on previous choices. (e.g., If the user chose a **2-layer architecture** in Q7, you **MUST NOT** offer `Component-first` naming in Q18, as 2-layer systems do not have a dedicated component layer). 
+> - Apply this intelligence to Product Type (Q2), Colours (Q3-Q6), Layer Architecture (Q7), Code Syntax (Q17), and Token naming (Q18). Adapt the dropdown OPTIONS based on what you learned — but still present the dropdown and wait for the user's selection.
+
 
 ### TURN 4 — Product Type + Colours (dropdowns)After the codebase question is resolved, show these four dropdowns together:
 
@@ -84,15 +87,12 @@ Show all optional collection questions as a batch. The Responsive collection is 
 ### TURN 7 — Component Details
 *(Only show if architecture is 3-layer or 4-layer)*
 
-**Q12** *(open text)*: "Which components need dedicated colour tokens in Component Colors?
+**Q12** *(ask_user_input — single_select)*: "Which components should be included in Component Colors?"
+- `All standard components — Includes all interactive (Button, Input, Switch, Tooltip, Dropdown...) and static (Card, Modal, Badge, Navbar, Table...) roles.`
+- `Selective — I'll list only the specific components I need`
 
-Note: icon, container, and divider are always included.
+> If "Selective": ask open-text — "List the exact components you need — I'll map them to the appropriate interactive or static patterns." — wait for response.
 
-Component Colors will be split into two groups:
-- **Interactive** — components with multiple states (default/hover/pressed/disabled): button, input, checkbox, radio, toggle, switch, tooltip, dropdown
-- **Static** — components with fewer/no interaction states: card, modal, badge, tag, navbar, sidebar, table, avatar, alert, banner, chip, progress
-
-List the components you need — I'll assign each to the correct group."
 
 Wait for the response. Then show:
 
@@ -127,19 +127,21 @@ Wait for the response. Then show:
 ### TURN 9 — Naming + Code Syntax
 
 **Q17** *(ask_user_input — single_select)*: "Token code syntax format?"
-- `CSS custom properties — e.g. --color-button-primary-background`
-- `Tailwind / kebab-case — e.g. color-button-primary-background`
-- `JavaScript camelCase — e.g. colorButtonPrimaryBackground`
-- `Android / XML underscore — e.g. color_button_primary_background`
-- `iOS / Swift PascalCase — e.g. ColorButtonPrimaryBackground`
-- `Custom format — I'll describe`
+- `CSS Custom Properties — Web standard format using double hyphens (e.g. --color-button-primary-background)`
+- `Tailwind / Kebab-case — Standard dash-separated naming for web/apps (e.g. color-button-primary-background)`
+- `JavaScript / React camelCase — Standard for JS systems (e.g. colorButtonPrimaryBackground)`
+- `Android / XML underscore — Snake_case format for Android development (e.g. color_button_primary_background)`
+- `iOS / Swift PascalCase — Capitalized format for iOS development (e.g. ColorButtonPrimaryBackground)`
+- `Custom format — I'll describe a different syntax`
 
 **Q18** *(ask_user_input — single_select)*: "Token naming convention?"
-- `Role-based — color.surface.primary / color.text.secondary`
-- `Component-first — color.button.secondary.default.background`
-- `Material Design — color.surface / color.on-surface / color.surface-variant`
-- `IBM Carbon — color.background / color.layer-01 / color.text-primary`
-- `Custom — I'll describe`
+> *Rule: If 2-layer architecture was chosen in Q7, OMIT the 'Component-first' option.*
+- `Role-based (Recommended) — Logical grouping by function. (e.g. color.surface.primary / color.text.secondary)`
+- `Component-first — Grouping by UI element. (e.g. color.button.secondary.default.background)` (HIDDEN if 2-layer chosen)
+- `Material Design — Industry standard naming. (e.g. color.surface / color.on-surface / color.surface-variant)`
+- `IBM Carbon — Industrial role naming. (e.g. color.background / color.layer-01 / color.text-primary)`
+- `Custom — I'll describe a different naming structure`
+
 
 > *Conversational Tip:* Reassure the user that modern, scalable systems use terms like `surface/page` or `surface/default` for backgrounds, and `text/primary` for main text. They do not need to worry if they don't see the exact phrase "page background" in the examples.
 
@@ -147,13 +149,21 @@ Wait for the response. Then show:
 
 ### TURN 10 — Final Options
 
-**Q19** *(open text)*: "Any other requirements — specific token values, tokens to avoid, existing conventions to match, or anything else? (leave blank to proceed)"
+**Q19** *(ask_user_input — single_select)*: "Any other requirements or specific details to include?"
+- `No — everything is covered. Proceed to architecture summary.`
+- `Yes — I have additional comments or requirements (specific values, naming tweaks, etc.)`
 
-Wait for response. If the user describes something requiring follow-up (e.g. a custom collection, a non-standard architecture), ask clarifying questions before proceeding to Phase 2.
+> If "Yes": ask open-text — "Please describe any additional requirements, conventions, or tokens I should include or avoid." — wait for response.
+
 
 ---
 
 ## PHASE 2 — CONFIRM ARCHITECTURE
+
+### 🧩 READ PHASE B: System Specifications
+Before proceeding, you MUST now read:
+- `references/05a-collections-core.md`
+- `references/05b-collections-semantic-components.md`
 
 Show this summary before generating anything:
 
@@ -207,16 +217,43 @@ Ask using ask_user_input: `Yes — generate everything` / `Change something firs
 
 ## PHASE 3 — GENERATION
 
-Read ALL 5 reference files before writing any JSON. 
+### 🏗️ READ PHASE C: Technical Implementation
+Before writing ANY JSON, you MUST now read:
+- `references/02-scoping-rules.md`
+- `references/03-json-format.md`
+- `references/04-primitives.md`
+- `references/06-generator-utility.md`
+
+### ⚠️ THINKING BUDGET — RULE #1 (OBEY BEFORE ANYTHING ELSE)
+Your `<thought>` block must be a **bulleted summary of under 100 words**. Do NOT narrate hex codes, ID calculations, alias chains, or script logic in your thinking. If you catch yourself writing more than 100 words of reasoning, **STOP and start writing code immediately.**
+
+### Data Blueprint Workflow (MANDATORY)
+Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
+1. **Step 1 — Data Dictionary**: Summarize the interview answers into a compact `brand_data` Python dictionary (hex codes, mode names, font choices, layer count). This is the ONLY planning you do.
+2. **Step 2 — Script**: Write a short Python script that imports `DesignTokenGenerator` from `references/06-generator-utility.md` and loops through your `brand_data` dictionary calling `create_token` and `nest_token`. **You must use the self-correcting prefix stripping and backfilling guards built into the utility.**
+3. **Step 3 — Output**: Execute and output the ZIP. No narration between steps.
+
+> **PERFORMANCE & STABILITY GUARDRAILS:**
+> 1. **No Bespoke Logic:** Do NOT "invent" custom loop logic. Use the patterns in `references/06-generator-utility.md`.
+> 2. **Resumption Rule:** if interrupted (Continue button), pick up immediately from where you left off in the script. Do NOT repeat reasoning.
+> 3. **Script Conciseness:** Rely on the blueprint patterns to keep the Python payload small.
+
+> **ALIAS INTEGRITY & BACKFILLING (CRITICAL):**
+> Broken aliases cause silent Figma import failures. You must verify every link:
+> 1. **The Backfilling Rule (Fail-Fast)**: If a structural collection (Density, Responsive, Layout) requires a value NOT in your current Primitives scale (e.g., 30px lineHeight), you **must stop immediately** and add that value to the `Primitives` collection. The `create_token` utility will raise a `KeyError` if you attempt to alias a missing Primitive — do not ignore this.
+> 2. **Verification Step**: Before outputting Turn C, run a mental "Pre-flight" check. Every `aliasData` targetVariableName MUST exist in the parent file. Check every token for mandatory `$value`.
+> 3. **Icon Mapping**: The `color/icon/*` group in Component Colors should alias `Theme` for general UI roles (default, muted, brand, error, etc.), unless a specific 4-layer semantic icon layer was requested.
+> 4. **Mandatory $value (Real Value Rule)**: `$value` on alias tokens is a placeholder but must be structural. Use the **Actual Resolved Value** for numbers and strings (safety fallback). Use a **Black Object** for colors. String tokens REQUIRE `"com.figma.type": "string"` at all layers, and **Primitive Strings DO have scopes**. NO curly braces. See `references/03-json-format.md`.
+> 5. **Typography Completeness Check**: Before writing Typography, explicitly list every role × every property (fontSize, lineHeight, letterSpacing, fontFamily, fontWeight) as a checklist. Verify all 5 are present for every role. A missing property = a dropped token in Figma.
+> 6. **Semantic Path Verification**: When referencing Semantic in `Component Colors`, verify that the specific path (e.g. `surface/raised`) was actually generated in the Semantic collection. It is not enough to check if the collection exists; you must check the path completeness.
+> 7. **Zero Broken References:** Every alias in a downstream collection (Theme, Responsive, Density, Effects, Typography, Semantic, Component Colors, Component Dimensions) MUST point to a token that already exists in its parent collection. If a downstream token needs a Primitive value that wasn't generated yet, you MUST add that token to Primitives first. Never ship a ZIP containing an alias whose target does not exist — Figma will silently fail on import.
 
 **OUTPUT CONSTRAINT CRITICAL RULE:**
 You must ONLY output valid `.zip` files containing the structured JSON. NEVER output `.skill` files or dump massive scripts to the user. Do not wrap the output in proprietary skill abstractions.
 
 > **CRITICAL PERFORMANCE RULE FOR PATH 2:** Do NOT attempt to write one giant script or generate all JSON in a single turn. You must safely break the generation across multiple turns as instructed below. Wait for the user to reply "Next" before proceeding. 
 
-> **CONSOLIDATED ZIP RULE:** Do NOT output the `.zip` file widget in Turn A or Turn B. Keep the JSON payload in your memory. You must only output the final `design-tokens.zip` widget during **TURN C**. The internal collection zips inside `design-tokens.zip` MUST be numbered by their import order (e.g., `1. Primitives.zip`, `2. Theme.zip`) as governed by the JSON Format reference.
-
-> **ALIAS INTEGRITY RULE — ZERO BROKEN REFERENCES:** Every alias in a downstream collection (Theme, Responsive, Density, Effects, Typography, Semantic, Component Colors, Component Dimensions) MUST point to a token that already exists in its parent collection. If a downstream token needs a Primitive value that wasn't generated yet, you MUST add that token to Primitives first. Never ship a ZIP containing an alias whose target does not exist — Figma will silently fail on import.
+> **CONSOLIDATED ZIP RULE**: Do NOT output the `.zip` file widget in Turn A or Turn B. Keep the JSON payload in your memory. You must only output the final `design-tokens.zip` widget during **TURN C**. The internal structure MUST be **folders** numbered by their import order (e.g., `1. Primitives/`, `2. Theme/`) as governed by the JSON Format reference. No nested ZIPs.
 
 ---
 
@@ -232,7 +269,7 @@ Then, jump directly to **Turn D (Token count reporting)**.
 *(Execute if complexity requires chunking)*
 
 ### TURN A — Core Foundations
-**Before writing Primitives:** Plan all downstream alias targets (Theme, Responsive, Density, Effects, Typography, Components). Backfill any missing primitive tokens so every future alias has a valid target. Generate Primitives LAST-MILE — after planning all downstream values, add any missing primitive tokens.
+**Before writing Primitives:** Ensure all downstream alias targets are covered by including necessary primitive tokens. Apply the Backfilling Rule — do NOT enumerate individual tokens in your thinking block. Write your `brand_data` dictionary immediately, then generate:
 
 Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET):
 1. **Primitives:** full colour palette + alpha variants (flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
@@ -274,26 +311,6 @@ Calculate the JSON for these collections ONLY:
 
 After delivering Turn C ZIPs, report a count table to the user so they can cross-check the import. Count **unique token paths** (one token = one line item in Figma's variable panel, regardless of how many modes it has). Do not multiply by mode count.
 
-### Mode file naming (critical — no "Value" names)
-- Primitives: `primitives.tokens.json` with `"modeName": "primitives"`
-- Typography: `typography.tokens.json` with `"modeName": "typography"`
-- Effects: `effects.tokens.json` with `"modeName": "effects"`
-- Semantic: `semantic.tokens.json` with `"modeName": "semantic"`
-- Component Colors: `component-colors.tokens.json` with `"modeName": "component-colors"`
-- Component Dimensions: `component-dimensions.tokens.json` with `"modeName": "component-dimensions"`
-- All other collections use their natural mode names (light, dark, mobile, compact etc.)
-
-### Default modes
-- Theme: light is default
-- Responsive: mobile is default
-- Density: comfortable is default
-
-Run the validation checklist from `references/03-json-format.md` before finalising each ZIP.
-
-### Token count reporting — required after generation
-
-After generating all ZIPs, report a count table to the user so they can cross-check the import. Count **unique token paths** (one token = one line item in Figma's variable panel, regardless of how many modes it has). Do not multiply by mode count.
-
 Example format:
 ```
 TOKENS GENERATED
@@ -316,7 +333,26 @@ Total               654
 ```
 Tell the user: "These counts reflect unique tokens (one per row in Figma), not multiplied by modes."
 
+### Mode file naming (critical — no "Value" names)
+- Primitives: `primitives.tokens.json` with `"modeName": "primitives"`
+- Typography: `typography.tokens.json` with `"modeName": "typography"`
+- Effects: `effects.tokens.json` with `"modeName": "effects"`
+- Semantic: `semantic.tokens.json` with `"modeName": "semantic"`
+- Component Colors: `component-colors.tokens.json` with `"modeName": "component-colors"`
+- Component Dimensions: `component-dimensions.tokens.json` with `"modeName": "component-dimensions"`
+- All other collections use their natural mode names (light, dark, mobile, compact etc.)
+
+### Default modes
+- Theme: light is default
+- Responsive: mobile is default
+- Density: comfortable is default
+
+Run the validation checklist from `references/03-json-format.md` before finalising each ZIP.
+
 ---
 
 
 > Import, scoping, and collection reference in `03-import-and-handoff.md`.
+
+---
+*Copyright (c) 2026 Shanmugha Sundaram Srinivasan. All rights reserved. Licensed under Proprietary Source Available License.*
