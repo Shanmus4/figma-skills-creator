@@ -407,6 +407,11 @@ def validate_tokens(files):
                 syntax = ext.get("com.figma.codeSyntax", {}).get("WEB", "")
                 if "  " in syntax:
                     raise ValueError(f"CRITICAL: Double-space detected in codeSyntax: {syntax}")
+                
+                # Bug 8 Fix: Catch broken alias lookups
+                if "com.figma.aliasData" in ext:
+                    if ext["com.figma.aliasData"]["targetVariableId"] == "VariableID:0:0":
+                        raise ValueError(f"CRITICAL: Broken alias 'VariableID:0:0' detected for token. Lookup failed during generation.")
 ```
 
 ### Primitives

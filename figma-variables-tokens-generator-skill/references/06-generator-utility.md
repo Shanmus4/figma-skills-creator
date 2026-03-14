@@ -20,6 +20,13 @@ class DesignTokenGenerator:
         self.counters[ns] = self.counters.get(ns, 0) + 1
         return f"VariableID:{ns}:{self.counters[ns]}"
 
+    def resolve_id(self, id_map, path):
+        """Safe accessor for pre-built ID maps (Fixes KeyError / Case Drift)"""
+        key = path.lower()
+        if key not in id_map:
+            raise KeyError(f"PREBUILD MISS: Path '{key}' not found in ID map. Ensure it was added to prebuild_ids().")
+        return id_map[key]
+
     def create_token(self, name, ns, type, value=None, scope=None, alias_target=None, alias_set=None, vid=None):
         path = name.lower()
         vid = vid or self.next_id(ns)
@@ -182,3 +189,25 @@ for path in theme_paths:
 - Responsive (mobile + tablet + desktop)  
 - Density (compact + comfortable + spacious)
 - Layout (xs + sm + md + lg + xl + xxl)
+
+### 6. Canonical Path Normalization (CRITICAL)
+
+**RULE:** Always lowercase all path segments inside your Python script construction. Never use camelCase in path strings passed to `prebuild_ids` or `resolve_id`.
+
+| Logical Segment | Canonical Lowercase Segment (Literal) |
+|---|---|
+| `lineHeight` | `lineheight` |
+| `letterSpacing` | `letterspacing` |
+| `fontFamily` | `fontfamily` |
+| `fontWeight` | `fontweight` |
+| `fontSize` | `fontsize` |
+
+**Example of safe construction:**
+```python
+# ❌ WRONG — Case drift risk
+path = f"font/lineHeight/{role}" 
+
+# ✓ CORRECT — Absolute lowercase
+path = f"font/lineheight/{role}".lower()
+vid = gen.resolve_id(resp_id_map, path)
+```
