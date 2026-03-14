@@ -33,12 +33,9 @@ Generate a specific list of collections the user must turn off based on their ex
 
 ---
 
-## PHASE 7 — VERIFICATION (COUNT CROSS-CHECK)
+## PHASE 6 — FOLLOW UP
 
-After the user confirms import is finished:
-1. Ask the user: "Please share a screenshot of your Local Variables panel (all collections) so I can verify the import counts."
-2. **Cross-check**: Compare the counts in the screenshot against your **Turn D (Tokens Generated)** table.
-3. **Diagnose**: If any collection count is lower in Figma than in your table (e.g. 30/80), it means Figma silently dropped tokens due to broken alias lookups or ID instability. You must stop and fix the generation logic before telling the user everything is fine.
+Ask: "Anything you'd like to change, add, or adjust?"
 
 ---
 
