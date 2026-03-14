@@ -1,8 +1,8 @@
-# Generator Utility Reference
+# DesignTokenGenerator Utility
 
-Use this standardized Python structure to generate Figma Variables JSON. This prevents "bespoke logic" and ensures format perfection while handling infinite data variations.
+> ⚡ **ZERO THINKING DIRECTIVE**: If you are reading this file, you are in Phase C (Generation). STOP all narration. STOP explaining your logic. Use the methods below to build your `brand_data` dictionary and execute your script immediately.
 
-## Core Utility (Standardized Logic)
+## 1. Core Logic
 
 ```python
 import json, zipfile, os

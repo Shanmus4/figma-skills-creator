@@ -35,6 +35,7 @@ Read these **3 files ONLY** before starting the questionnaire. Other reference f
 2.  **Mandatory Dropdowns (ask_user_input)**: Every question labeled `ask_user_input` MUST be sent as a real tool call. You are NOT allowed to "infer" answers from context unless specifically told to do so by a dynamic rule.
 3.  **Literal Dropdown Labels (MANDATORY)**: You MUST use the exact text provided in the instructions for dropdown labels. Do NOT remove "e.g." or shorten the examples. If an example is provided in the instructions (e.g. `(e.g. colorButtonPrimaryBasis)`), it MUST appear in the tool call exactly as written.
 4.  **Wait for User**: After every `ask_user_input` call, STOP and wait for the user's response. Do NOT generate internal thoughts about next steps until the user replies.
+5.  **Thinking Budget**: Your `<thought>` block must be under **50 words**. Do NOT narrate your reasoning or explain the instructions to yourself.
 
 ---
 

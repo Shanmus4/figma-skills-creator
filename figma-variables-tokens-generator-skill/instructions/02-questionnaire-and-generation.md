@@ -225,7 +225,11 @@ Before writing ANY JSON, you MUST now read:
 - `references/06-generator-utility.md`
 
 ### ⚠️ THINKING BUDGET — RULE #1 (OBEY BEFORE ANYTHING ELSE)
-Your `<thought>` block must be a **bulleted summary of under 100 words**. Do NOT narrate hex codes, ID calculations, alias chains, or script logic in your thinking. If you catch yourself writing more than 100 words of reasoning, **STOP and start writing code immediately.**
+Your `<thought>` block must be a **bulleted summary of under 50 words**. 
+- **PROHIBITED**: Explaining hex codes, ID calculations, alias chains, or script logic.
+- **PROHIBITED**: Narrating what the code will do or why you are using a certain utility method.
+- **MANDATORY**: Jump directly to **Step 1 — Data Dictionary** after your bullets. 
+If you catch yourself writing more than 50 words of reasoning, **STOP and start writing code immediately.**
 
 ### Data Blueprint Workflow (MANDATORY)
 Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
@@ -236,7 +240,8 @@ Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
     - **C. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary. In the next turn, load the dict and reconstruct with `gen = DesignTokenGenerator.from_dict(pickle.load(f))`. This removes all module-path dependencies and ensures the state is always loadable regardless of the script's `__main__` context.
 
     - **D. Loop**: Loop through your `brand_data` calling `create_token` and `nest_token`. You must use the self-correcting prefix stripping and backfilling guards built into the utility.
-3. **Step 3 — Output**: Execute and output the ZIP. No narration between steps.
+3. **Step 3 — Output**: Execute and output the ZIP. 
+    - **ZERO NARRATION**: Do not explain the output, do not provide "Next Steps" narration, and do not summarize what was generated. The ZIP widget and the Token Count Table (Turn D) are the only allowed outputs.
 
 > **PERFORMANCE & STABILITY GUARDRAILS (OBEY OR RISK SYSTEM FAILURE):**
 > 1. **Default to Single-Script Generation**: Always write all generation phases in a **single `gen_all.py`** script. This runs all phases sequentially in memory and avoids all serialization problems (The "No Wasted Runs" Rule). Only split into separate scripts if token count exceeds ~1000 and context truncation is a critical risk.
