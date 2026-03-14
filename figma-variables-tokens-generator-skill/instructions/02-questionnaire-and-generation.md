@@ -2,7 +2,7 @@
 > If the user provided existing tokens (from Figma or Code in Turns 1/2), you MUST intelligently adapt the questions in Turns 4-9 based on your analysis. 
 > - **NEVER SKIP A QUESTION.** Every question in Turns 4-9 MUST still be asked, even if you can infer the answer. The user must always have the chance to confirm or change.
 > - **Contextualize the question:** Tell the user what you found. (e.g., *"I see your current system only has a Light mode."* or *"I see these tokens came from a Web project."*)
-> - **Inject dynamic choices:** Modify your dropdown choices to include keeping their existing setup versus expanding/changing it. (e.g., `Keep existing: Light mode only`, `Expand to: Light + Dark modes`).
+> - **Inject dynamic choices (MANDATORY EXAMPLES):** Modify your dropdown choices to include keeping their existing setup versus expanding/changing it. **ALL dropdown options MUST include a representative example in parentheses.** (e.g., `Keep existing: Light mode only`, `Expand to: Light + Dark modes`).
 > - **Architectural Dependencies:** Some questions depend on previous choices. (e.g., If the user chose a **2-layer architecture** in Q7, you **MUST NOT** offer `Component-first` naming in Q18, as 2-layer systems do not have a dedicated component layer). 
 > - Apply this intelligence to Product Type (Q2), Colours (Q3-Q6), Layer Architecture (Q7), Code Syntax (Q17), and Token naming (Q18). Adapt the dropdown OPTIONS based on what you learned — but still present the dropdown and wait for the user's selection.
 
@@ -149,11 +149,15 @@ Wait for the response. Then show:
 
 ### TURN 10 — Final Options
 
+**⛔ HARD STOP:** You must ask this question and wait for a response before showing the Architecture Summary or generating a single token. Never skip this turn.
+
 **Q19** *(ask_user_input — single_select)*: "Any other requirements or specific details to include?"
 - `No — everything is covered. Proceed to architecture summary.`
 - `Yes — I have additional comments or requirements (specific values, naming tweaks, etc.)`
 
 > If "Yes": ask open-text — "Please describe any additional requirements, conventions, or tokens I should include or avoid." — wait for response.
+
+**⛔ STOP HERE.** Send this message and wait for the user's response.
 
 
 ---
@@ -198,20 +202,23 @@ CC split:      {split / flat / N/A}
 High contrast: {yes/no}
 ```
 
-**EVALUATE INITIAL RESOURCES & COMPLEXITY:**
-Before asking for confirmation, evaluate the raw size of the requested system against your own context and output token limits. Decide intelligently which generation path to take:
+**AUTONOMOUS PATH SELECTION (MANDATORY):**
+You (the AI) MUST choose the safest generation path independently. Do NOT ask the user to choose between Path 1 and Path 2. 
+
+1.  **Evaluate Complexity**: Based on the confirmed architecture (layers, collections, modes), calculate if a single-shot generation is safe.
+2.  **Declare your choice**: Tell the user: *"Based on the architecture complexity, I have chosen [Path 1: One-Shot / Path 2: Phased] to ensure maximum precision and zero timeouts."*
+3.  **Final Confirmation**:
+    Ask using `ask_user_input` (single_select): *"Should I proceed with the generation as described above?"*
+    - `Yes — generate everything`
+    - `Change something first (e.g., architecture, naming, syntax)`
 
 **Path 1: One-Shot Generation**
 - Decide this if: You calculate that you can comfortably generate all JSON structures for the requested architecture in a single output window without hitting a timeout or trailing off.
-- Tell the user: *"System complexity is well within my limits. I will generate everything in a single ZIP file immediately."*
 
 **Path 2: Phased Generation**
-- Decide this if: You calculate the architecture is massive (e.g. 4-layer, or many dense optional collections) and poses a high risk of an output timeout or incomplete JSON generation.
-- Tell the user: *"To ensure absolute precision and prevent timeouts while calculating this massive architecture, I will break this into three background phases (Turns A, B, and C). You will only need to type 'Next' when prompted. I will provide ONE combined final ZIP file at the very end."*
+- Decide this if: You calculate the architecture is massive (e.g. 4-layer, or many dense optional collections) and poses a high risk of an output timeout or incomplete JSON generation. Tell the user: *"To ensure absolute precision and prevent timeouts while calculating this massive architecture, I will break this into three background phases (Turns A, B, and C). You will only need to type 'Next' when prompted. I will provide ONE combined final ZIP file at the very end."*
 
-Ask using ask_user_input: `Yes — generate everything` / `Change something first`
-
-**Do not generate a single token until the user confirms.**
+**Do not generate a single token until the user confirms "Yes — generate everything".**
 
 ---
 

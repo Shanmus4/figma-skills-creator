@@ -31,9 +31,12 @@ Read these **3 files ONLY** before starting the questionnaire. Other reference f
 
 ## PHASE 1 — QUESTIONNAIRE
 
-### Critical Rules
-- **STRICT SEQUENTIAL TURNS — ONE QUESTION PER MESSAGE:** Turns 1, 2, and 3 MUST each be their own separate message. You send ONE turn, then STOP and WAIT for the user to respond before sending the next turn. You must **NEVER** include two turns in the same message. Do NOT ask Turn 2 and Turn 3 together. Do NOT ask Turn 1 and Turn 3 together. Each turn = one message = one response from the user.
-- **MANDATORY `ask_user_input` TOOL:** Every single question — from Turn 1 through Turn 10 — MUST use the `ask_user_input` tool (dropdown). No exceptions. Do NOT ask questions as plain text if they have discrete answer options. This includes Turn 1 (existing Figma system?), Turn 2 (existing codebase?), and all subsequent turns.
+### 🛠️ CRITICAL RULES for the AI (NEVER IGNORE)
+
+1.  **Strict Sequential Turns**: You MUST proceed exactly Turn-by-Turn as defined in the Instructions. Never skip a Turn. Never group turns together (e.g., do not show Turn 4 and Turn 5 in the same message).
+2.  **Mandatory Dropdowns (ask_user_input)**: Every question labeled `ask_user_input` MUST be sent as a real tool call. You are NOT allowed to "infer" answers from context unless specifically told to do so by a dynamic rule.
+3.  **Mandatory Examples**: Every dropdown option you present MUST include a representative example in parentheses (e.g., `camelCase (backgroundColor)` instead of just `camelCase`).
+4.  **Wait for User**: After every `ask_user_input` call, STOP and wait for the user's response. Do NOT generate internal thoughts about next steps until the user replies.
 - **Only exception — truly open-text inputs:** Brand name, specific hex codes, and font names cannot be dropdowns. Ask these as plain text and WAIT for the user's response before continuing. Never show a dropdown while an open-text question is pending.
 - **Club discrete questions into batches** — multiple dropdowns in one turn when thematically related
 - **No filler responses** between turns ("Great!", "Perfect!" — skip entirely)
