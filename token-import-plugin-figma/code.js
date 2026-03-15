@@ -28,103 +28,95 @@ figma.ui.onmessage = async (msg) => {
 // ─── CONFLICT DETECTION ───────────────────────────────────────────────────────
 
 async function checkConflicts(collections) {
-  const localCollections = figma.variables.getLocalVariableCollections()
-  const localVars = figma.variables.getLocalVariables()
-  const varNameById = {}
-  const varCollById = {}
-  
-  // Build lookup maps for all local variables
-  for (const coll of localCollections) {
-    for (const vid of coll.variableIds) {
-      const v = localVars.find(lv => lv.id === vid)
-      if (v) {
-        varNameById[vid] = v.name
-        varCollById[vid] = coll.name
+  try {
+    const localCollections = figma.variables.getLocalVariableCollections()
+    const localVars = figma.variables.getLocalVariables()
+    const varNameById = {}
+    const varCollById = {}
+    
+    for (const coll of localCollections) {
+      for (const vid of coll.variableIds) {
+        const v = localVars.find(lv => lv.id === vid)
+        if (v) { varNameById[vid] = v.name; varCollById[vid] = coll.name }
       }
     }
-  }
-  
-  const analysis = collections.map(collData => {
-    const existing = localCollections.find(c => c.name.toLowerCase() === collData.name.toLowerCase())
-    if (!existing) {
-      return { name: collData.name, status: 'NEW', newCount: collData.tokenCount, changedCount: 0, sameCount: 0 }
-    }
     
-    let newCount = 0, changedCount = 0, sameCount = 0, removedCount = 0
-    const existingVars = localVars.filter(v => v.variableCollectionId === existing.id)
-    
-    // Normalize both sets for reliable comparison
-    const existingVarsByName = {}
-    existingVars.forEach(v => {
-      const normName = v.name.trim()
-      existingVarsByName[normName] = v
-    })
+    const analysis = collections.map(collData => {
+      const collection = localCollections.find(c => c.name.toLowerCase() === collData.name.toLowerCase())
+      if (!collection) return { name: collData.name, status: 'NEW', tokenCount: collData.tokenCount }
+      
+      let newCount = 0, changedCount = 0, sameCount = 0, removedCount = 0
+      const existingVars = localVars.filter(v => v.variableCollectionId === collection.id)
+      const existingVarsByName = {}
+      
+      existingVars.forEach(v => {
+        const normName = v.name.split('/').map(seg => seg.trim()).filter(Boolean).join('/')
+        existingVarsByName[normName] = v
+      })
 
-    const allIncomingPaths = new Set()
-    collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => {
-      if (p) {
-        // Normalize segments: "color / blue / 800" -> "color/blue/800"
-        const cleanPath = p.split('/').map(seg => seg.trim()).filter(Boolean).join('/')
-        if (cleanPath) allIncomingPaths.add(cleanPath)
-      }
-    }))
+      // 1. Audit Modes
+      const localModeNames = collection.modes.map(m => m.name.toLowerCase())
+      const incomingModeNames = collData.modes.map(m => m.modeName.toLowerCase())
+      const removedModes = collection.modes.filter(m => !incomingModeNames.includes(m.name.toLowerCase())).map(m => m.name)
+      const addedModes = collData.modes.filter(m => !localModeNames.includes(m.modeName.toLowerCase())).map(m => m.modeName)
+      const modeStats = { removed: removedModes, added: addedModes }
 
-    const localModeNames = existing.modes.map(m => m.name) // Case sensitive
-    const incomingModeNames = collData.modes.map(m => m.modeName)
-    
-    // Check for mode changes
-    const modesAdded = incomingModeNames.filter(name => !localModeNames.includes(name)).length
-    const modesRemoved = localModeNames.filter(name => !incomingModeNames.includes(name)).length
-    const modeMismatch = modesAdded > 0 || modesRemoved > 0 ? { added: modesAdded, removed: modesRemoved } : null
-
-    const localModeMap = {}
-    existing.modes.forEach(m => localModeMap[m.name] = m.modeId) // Case sensitive
-
-    // Check for New and Changed
-    for (const path of allIncomingPaths) {
-      const local = existingVarsByName[path]
-      if (!local) {
-        newCount++
-      } else {
-        let hasMismatch = false
-        for (const incomingMode of collData.modes) {
-          const modeId = localModeMap[incomingMode.modeName] || existing.modes[0].modeId // Case sensitive
-          const localValue = local.valuesByMode[modeId]
-          const token = incomingMode.tokens[path]
-          
-          if (token && !isBetterEqual(localValue, token, local.resolvedType, varNameById, varCollById)) {
-            console.log(`[CONFLICT] Mismatch at ${path} (Mode: ${incomingMode.modeName})`)
-            console.log(`Local:`, localValue)
-            console.log(`Incoming:`, token)
-            hasMismatch = true
-            break
-          }
+      // 2. Pre-normalize Incoming Tokens for lookup
+      // normalizedModes: [ { name: 'ModeName', tokens: { 'normalizedPath': value } } ]
+      const normalizedModes = collData.modes.map(m => {
+        const normTokens = {}
+        for (const [p, val] of Object.entries(m.tokens)) {
+          const np = p.split('/').map(s => s.trim()).filter(Boolean).join('/')
+          normTokens[np] = val
         }
-        if (hasMismatch) changedCount++
-        else sameCount++
-      }
-    }
+        return { name: m.modeName.toLowerCase(), tokens: normTokens }
+      })
 
-    // Check for Removed (Figma has it, ZIP doesn't)
-    for (const normName in existingVarsByName) {
-      if (!allIncomingPaths.has(normName)) {
-        console.log(`[LESS] Missing from ZIP: "${normName}"`)
-        removedCount++
+      // All paths in the ZIP
+      const zipPaths = new Set()
+      normalizedModes.forEach(m => Object.keys(m.tokens).forEach(p => zipPaths.add(p)))
+
+      // 3. Variable Audit
+      // Check Figma side for SAME/UPDATE/LESS
+      for (const normName in existingVarsByName) {
+        if (!zipPaths.has(normName)) {
+          removedCount++
+          console.log(`[LESS] Missing from ZIP: "${normName}"`);
+        } else {
+          const v = existingVarsByName[normName]
+          let hasMismatch = false
+          let sharedModeFound = false
+
+          for (const zm of normalizedModes) {
+            const targetMode = collection.modes.find(m => m.name.toLowerCase() === zm.name)
+            if (targetMode) {
+              sharedModeFound = true
+              const localValue = v.valuesByMode[targetMode.modeId]
+              const incomingToken = zm.tokens[normName]
+              if (incomingToken && !isBetterEqual(localValue, incomingToken, v.resolvedType, varNameById, varCollById)) {
+                hasMismatch = true
+                break
+              }
+            }
+          }
+          if (hasMismatch) changedCount++
+          else sameCount++
+        }
       }
-    }
+
+      // Check ZIP side for NEW
+      for (const p of zipPaths) {
+        if (!existingVarsByName[p]) newCount++
+      }
+
+      return { name: collection.name, status: 'CONFLICT', newCount, changedCount, sameCount, removedCount, modeStats }
+    })
     
-    return { 
-      name: collData.name, 
-      status: 'CONFLICT', 
-      newCount, 
-      changedCount, 
-      sameCount, 
-      removedCount,
-      modeMismatch
-    }
-  })
-  
-  figma.ui.postMessage({ type: 'CONFLICTS_FOUND', analysis })
+    figma.ui.postMessage({ type: 'CONFLICTS_FOUND', analysis })
+  } catch (e) {
+    console.error(e)
+    figma.ui.postMessage({ type: 'IMPORT_ERROR', message: `Conflict analysis failed: ${e.message}` })
+  }
 }
 
 function isBetterEqual(localValue, incomingToken, type, varNameById, varCollById) {
@@ -163,7 +155,7 @@ async function handleImport(collections, strategy = 'CREATE') {
   const collectionMap = {} // collectionName → { collection, modeMap }
 
   try {
-    const collectionStats = {} // collName -> { success: Set(paths), errors: [], total: 0 }
+    const collectionStats = {} // collName -> { success: Set(paths), failures: Set(paths), errors: [], total: 0 }
     const newVariableIds = new Set()
 
     // NEW: Pre-populate variableMap with ALL existing local variables to support cross-collection aliases
@@ -171,65 +163,107 @@ async function handleImport(collections, strategy = 'CREATE') {
     const allLocalVars = figma.variables.getLocalVariables()
     allLocalVars.forEach(v => {
       const coll = allLocalCollections.find(c => c.id === v.variableCollectionId)
-      if (coll) variableMap[`${coll.name}/${v.name}`] = v.id
+      if (coll) {
+        // MUST normalize local name to match ZIP paths
+        const normName = v.name.split('/').map(s => s.trim()).filter(Boolean).join('/')
+        variableMap[`${coll.name}/${normName}`] = v.id
+      }
     })
 
     for (const collData of collections) {
       const collName = collData.name
       let collection
       let modeMap = {}
-      collectionStats[collName] = { success: new Set(), errors: [], total: (collData.modes[0] && collData.modes[0].tokens) ? Object.keys(collData.modes[0].tokens).length : 0 }
-
-      // ── Resolve Collection ──
-      const existing = localCollections.find(c => c.name === collName)
+      collectionStats[collName] = { 
+        success: new Set(), 
+        failures: new Set(),
+        errors: [], 
+        total: 0 
+      }
       
+      const zipPathsForThisColl = new Set()
+      collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => {
+        const np = p.split('/').map(s => s.trim()).filter(Boolean).join('/')
+        zipPathsForThisColl.add(np)
+      }))
+      collectionStats[collName].total = zipPathsForThisColl.size
+
+      // ── Resolve Collection (Case Sensitive per User Request) ──
+      const existing = localCollections.find(c => c.name === collName)
+
+      // ── Sync Modes ──
+      const incomingModeNames = collData.modes.map(m => m.modeName.toLowerCase())
+      const orderedModes = sortModes(collName, collData.modes.map(m => m.modeName))
+
       if (strategy === 'UPDATE' && existing) {
         collection = existing
-        collection.modes.forEach(m => modeMap[m.name] = m.modeId)
+        // Deletion: Remove modes NOT in incoming data
+        const localModes = collection.modes
+        localModes.forEach(m => {
+          if (!incomingModeNames.includes(m.name.toLowerCase())) {
+             console.log(`[SYNC] Deleting orphaned mode: ${m.name}`)
+             try { collection.removeMode(m.modeId) } catch(e) { console.error(`Failed to remove mode ${m.name}: ${e.message}`) }
+          } else {
+             modeMap[m.name.toLowerCase()] = m.modeId
+          }
+        })
+
+        // Addition: Add missing modes
+        orderedModes.forEach(mName => {
+          if (!modeMap[mName.toLowerCase()]) {
+            modeMap[mName.toLowerCase()] = collection.addMode(mName)
+          }
+        })
       } else {
         const finalName = (strategy === 'NEW' && existing) ? `${collName} (Imported)` : collName
         collection = figma.variables.createVariableCollection(finalName)
-      }
-
-      // ── Sync Modes ──
-      const incomingModeNames = collData.modes.map(m => m.modeName)
-      const orderedModes = sortModes(collName, incomingModeNames)
-
-      if (strategy === 'UPDATE' && existing) {
-        for (const modeName of orderedModes) {
-          if (!modeMap[modeName]) {
-            modeMap[modeName] = collection.addMode(modeName)
-          }
-        }
-      } else {
+        
         let firstMode = true
         for (const modeName of orderedModes) {
           if (firstMode) {
             const defaultId = collection.modes[0].modeId
             collection.renameMode(defaultId, modeName)
-            modeMap[modeName] = defaultId
+            modeMap[modeName.toLowerCase()] = defaultId
             firstMode = false
           } else {
-            modeMap[modeName] = collection.addMode(modeName)
+            modeMap[modeName.toLowerCase()] = collection.addMode(modeName)
           }
         }
       }
 
-      collectionMap[collName] = { collection, modeMap }
+      // ── Sync Variables (Deletions first for Replace mode) ──
+      if (strategy === 'UPDATE' && existing) {
+        const zipPaths = new Set()
+        collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => {
+          zipPaths.add(p.split('/').map(seg => seg.trim()).filter(Boolean).join('/'))
+        }))
+
+        const collectionVars = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id)
+        collectionVars.forEach(v => {
+          const normName = v.name.split('/').map(seg => seg.trim()).filter(Boolean).join('/')
+          if (!zipPaths.has(normName)) {
+            console.log(`[SYNC] Deleting orphaned variable: ${v.name}`)
+            try { 
+              v.remove() 
+              delete variableMap[`${collName}/${normName}`]
+            } catch(e) { console.error(`Failed remove: ${e.message}`) }
+          }
+        })
+      }
 
       // ── Create/Update variables ──
       for (const modeData of collData.modes) {
-        const modeId = modeMap[modeData.modeName]
+        const modeId = modeMap[modeData.modeName.toLowerCase()]
         if (modeId === undefined) continue
 
-        for (const [path, token] of Object.entries(modeData.tokens)) {
+        for (const [rawPath, token] of Object.entries(modeData.tokens)) {
+          const path = rawPath.split('/').map(s => s.trim()).filter(Boolean).join('/')
           const varKey = `${collName}/${path}`
           let variable
 
           try {
             if (!variableMap[varKey]) {
-              const resolvedType = toFigmaType(token.type)
-              variable = figma.variables.createVariable(path, collection, resolvedType)
+              variable = figma.variables.createVariable(path, collection, toFigmaType(token.type))
               variableMap[varKey] = variable.id
               newVariableIds.add(variable.id)
             } else {
@@ -264,9 +298,10 @@ async function handleImport(collections, strategy = 'CREATE') {
               })
             } else {
               variable.setValueForMode(modeId, toFigmaValue(token.type, token.value))
-              collectionStats[collName].success.add(path)
+              // We'll calculate success at the end based on failures
             }
           } catch (e) {
+            collectionStats[collName].failures.add(path)
             collectionStats[collName].errors.push(`${path}: ${e.message}`)
           }
         }
@@ -283,14 +318,15 @@ async function handleImport(collections, strategy = 'CREATE') {
       const targetId  = variableMap[targetKey]
 
       if (!targetId) {
-        const err = `Unresolved alias — ${variable.name} → ${targetName} (${targetSet})`
-        aliasErrors.push(err)
-        collectionStats[collName].errors.push(`${path}: Unresolved alias`)
-        // If it was a new variable and it has NO valid values, remove it
-        if (newVariableIds.has(varId)) {
+        const fullTarget = `${targetSet}/${targetName}`
+        collectionStats[collName].failures.add(path)
+        collectionStats[collName].errors.push(`${path}: Unresolved alias (Target: ${fullTarget})`)
+        
+        // If "Replace" sync, we MUST remove it even if it existed before, 
+        // because the source of truth (ZIP) has is in a broken state.
+        if (strategy === 'UPDATE' || newVariableIds.has(varId)) {
+          console.log(`[SYNC] Removing variable due to broken alias: ${path}`)
           try {
-             // Check if it has any other successful modes or values? 
-             // For simplicity, if the ALIAS fails and it's new, we prune it.
              variable.remove()
              newVariableIds.delete(varId)
              delete variableMap[`${collName}/${path}`]
@@ -302,25 +338,41 @@ async function handleImport(collections, strategy = 'CREATE') {
       try {
         const targetVar = figma.variables.getVariableById(targetId)
         variable.setValueForMode(modeId, figma.variables.createVariableAlias(targetVar))
-        collectionStats[collName].success.add(path)
       } catch (e) {
-        const err = `Alias failed — ${variable.name}: ${e.message}`
-        aliasErrors.push(err)
+        collectionStats[collName].failures.add(path)
         collectionStats[collName].errors.push(`${path}: ${e.message}`)
-        if (newVariableIds.has(varId)) {
+        if (strategy === 'UPDATE' || newVariableIds.has(varId)) {
+          console.log(`[SYNC] Removing variable due to alias error: ${path}`)
           try { variable.remove(); newVariableIds.delete(varId); delete variableMap[`${collName}/${path}`] } catch(ex){}
         }
       }
     }
 
-    const results = Object.entries(collectionStats).map(([name, stats]) => ({
+    // ── Final Success Tally ──
+    for (const collName in collectionStats) {
+      const stats = collectionStats[collName]
+      const collData = collections.find(c => c.name === collName)
+      if (!collData) continue
+      
+      const zipPaths = new Set()
+      collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => {
+        const np = p.split('/').map(s => s.trim()).filter(Boolean).join('/')
+        zipPaths.add(np)
+      }))
+      
+      zipPaths.forEach(p => {
+        if (!stats.failures.has(p)) {
+          stats.success.add(p)
+        }
+      })
+    }
+
+    figma.ui.postMessage({ type: 'IMPORT_COMPLETE', results: Object.entries(collectionStats).map(([name, stats]) => ({
       name,
       successCount: stats.success.size,
       totalCount: stats.total,
       errors: stats.errors
-    }))
-
-    figma.ui.postMessage({ type: 'IMPORT_COMPLETE', results, aliasErrors })
+    })) })
 
   } catch (e) {
     figma.ui.postMessage({ type: 'IMPORT_ERROR', message: e.message })
