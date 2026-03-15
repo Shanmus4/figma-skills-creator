@@ -30,6 +30,8 @@ figma.ui.onmessage = async (msg) => {
 async function checkConflicts(collections) {
   const localCollections = figma.variables.getLocalVariableCollections()
   const localVars = figma.variables.getLocalVariables()
+  const varNameById = {}
+  localVars.forEach(v => varNameById[v.id] = v.name)
   
   const analysis = collections.map(collData => {
     const existing = localCollections.find(c => c.name === collData.name)
@@ -48,9 +50,7 @@ async function checkConflicts(collections) {
         newCount++
       } else {
         const localValue = local.valuesByMode[modeId]
-        const incomingValue = toFigmaValue(token.type, token.value)
-        
-        if (isBetterEqual(localValue, incomingValue, local.resolvedType)) {
+        if (isBetterEqual(localValue, token, local.resolvedType, varNameById)) {
           sameCount++
         } else {
           changedCount++
@@ -64,15 +64,24 @@ async function checkConflicts(collections) {
   figma.ui.postMessage({ type: 'CONFLICTS_FOUND', analysis })
 }
 
-function isBetterEqual(a, b, type) {
-  if (type === 'COLOR') {
-    if (!a || !b) return a === b
-    return Math.abs(a.r - b.r) < 0.005 && 
-           Math.abs(a.g - b.g) < 0.005 && 
-           Math.abs(a.b - b.b) < 0.005 && 
-           Math.abs((a.a||1) - (b.a||1)) < 0.01
+function isBetterEqual(localValue, incomingToken, type, varNameById) {
+  if (localValue && localValue.type === 'VARIABLE_ALIAS') {
+    if (!incomingToken.alias) return false
+    const localTargetName = varNameById[localValue.id] || ''
+    // Corrected targetName vs targetVariableName to match ui.html parser
+    return localTargetName === incomingToken.alias.targetName
   }
-  return a === b
+
+  const incomingValue = toFigmaValue(incomingToken.type, incomingToken.value)
+
+  if (type === 'COLOR') {
+    if (!localValue || !incomingValue) return localValue === incomingValue
+    return Math.abs(localValue.r - (incomingValue.r || 0)) < 0.005 && 
+           Math.abs(localValue.g - (incomingValue.g || 0)) < 0.005 && 
+           Math.abs(localValue.b - (incomingValue.b || 0)) < 0.005 && 
+           Math.abs((localValue.a||1) - (incomingValue.a||1)) < 0.01
+  }
+  return localValue === incomingValue
 }
 
 // ─── IMPORT ───────────────────────────────────────────────────────────────────

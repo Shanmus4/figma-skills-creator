@@ -285,10 +285,10 @@
                     </div>
                 </div>
 
-                <div id="conflict-area" style="display:none; flex-direction:column; gap:12px;">
-                    <div style="border:1px solid #000; background:var(--tag-yellow); padding:10px;">
-                        <div style="font-weight:800; font-size:11px; margin-bottom:4px;">CONFLICTS_DETECTED</div>
-                        <div id="conflict-list" style="font-family:var(--font-mono); font-size:9px; font-weight:700;"></div>
+                <div id="conflict-area" style="display:none; flex-direction:column; gap:16px;">
+                    <div style="border:2px solid #000; background:#f9f9f9; padding:16px;">
+                        <div style="font-weight:900; font-size:12px; margin-bottom:12px; color: #000; letter-spacing: 0.5px; border-bottom: 2px solid #000; padding-bottom: 6px;">CONFLICTS_DETECTED</div>
+                        <div id="conflict-list" style="font-family:var(--font-mono); font-size:10px; font-weight:700;"></div>
                     </div>
                     <div class="btn-row">
                         <button class="primary" onclick="doImport('UPDATE')">Merge Update</button>
@@ -422,8 +422,12 @@ async function handleFile(file) {
         document.getElementById('file-name').innerText = file.name.toUpperCase();
         document.getElementById('file-chosen').style.display = 'flex';
         document.getElementById('drop-zone').style.display = 'none';
+        document.getElementById('import-bar').style.width = '60%';
         parent.postMessage({ pluginMessage: { type: 'CHECK_CONFLICTS', collections } }, '*');
-    } catch (e) { showError(e.message); } finally { document.getElementById('progress').style.display = 'none'; }
+    } catch (e) { 
+        document.getElementById('progress').style.display = 'none';
+        showError(e.message); 
+    }
 }
 
 function resetUI() {
@@ -472,6 +476,8 @@ window.onmessage = (e) => {
     const msg = e.data.pluginMessage;
     if (!msg) return;
     if (msg.type === 'CONFLICTS_FOUND') {
+        document.getElementById('progress').style.display = 'none';
+        document.getElementById('import-bar').style.width = '0%';
         const analysis = msg.analysis;
         const conflicts = analysis.filter(a => a.status === 'CONFLICT');
         if (conflicts.length > 0) {
