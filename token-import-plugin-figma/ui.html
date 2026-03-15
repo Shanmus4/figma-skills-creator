@@ -82,10 +82,10 @@
     
     .main-title {
         font-family: var(--font-main);
-        font-size: 24px;
+        font-size: 18px;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: -1px;
+        letter-spacing: -0.8px;
         line-height: 1;
         color: var(--panel-dark);
     }
@@ -216,10 +216,10 @@
         font-family: var(--font-sans); font-size: 11px; font-weight: 800; text-transform: uppercase;
         padding: 10px 16px; border: 1px solid var(--border-color); cursor: pointer; transition: 0.1s;
     }
-    button.primary { background: var(--panel-dark); color: var(--text-inverse); width: 100%; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
-    button.primary:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(0,0,0,1); }
+    button.primary { background: var(--panel-dark); color: var(--text-inverse); width: 100%; font-size: 9px; padding: 6px 12px; border: 1px solid #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); height: 26px; }
+    button.primary:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 rgba(0,0,0,1); }
     button.primary:active { transform: translate(0,0); box-shadow: none; }
-    button.secondary { background: var(--panel-bg); color: var(--text-main); }
+    button.secondary { background: var(--panel-bg); color: var(--text-main); font-size: 9px; padding: 6px 12px; border: 1px solid #000; height: 26px; }
     button:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
     /* ── Parsing Error ── */
@@ -287,10 +287,10 @@
                     </div>
                 </div>
 
-                <div id="conflict-area" style="display:none; flex-direction:column; gap:16px;">
-                    <div style="background:#fcfcfc; padding:16px; border:1px solid #eee; border-radius: 8px;">
-                        <div style="font-weight:900; font-size:18px; margin-bottom:16px; color: #000; letter-spacing: -0.5px; border-bottom: 2px solid #000; padding-bottom: 8px;">CONFLICTS_DETECTED</div>
-                        <div id="conflict-list" style="font-size:11px;"></div>
+                <div id="conflict-area" style="display:none; flex-direction:column; gap:8px;">
+                    <div style="background:#fcfcfc; padding:8px; border:1px solid #000; border-radius: 0;">
+                        <div style="font-weight:900; font-size:12px; margin-bottom:8px; color: #000; letter-spacing: -0.2px; border-bottom: 1px solid #000; padding-bottom: 4px;">CONFLICTS_DETECTED</div>
+                        <div id="conflict-list" style="font-size:8px;"></div>
                     </div>
                     <div class="btn-row">
                         <button class="primary" onclick="doImport('UPDATE')">Merge Update</button>
