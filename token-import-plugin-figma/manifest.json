@@ -1,9 +1,17 @@
 {
-  "name": "Token Porter",
+  "name": "Token Collections Importer",
   "id": "token-porter-figma-variables",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
-  "permissions": ["currentuser"]
+  "permissions": ["currentuser"],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://unpkg.com",
+      "https://cdnjs.cloudflare.com",
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com"
+    ]
+  }
 }

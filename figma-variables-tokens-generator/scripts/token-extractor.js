@@ -264,7 +264,9 @@ console.log("Copied using fallback");
 
 await copy(json);
 
-console.log(result);
+console.clear();
+console.log("%c✅ Tokens copied to your clipboard!", "color: #4ade80; font-size: 16px; font-weight: bold;");
+console.log("%cPlease paste it back in the AI conversation.", "color: #94a3b8; font-size: 14px;");
 
 return result;
 

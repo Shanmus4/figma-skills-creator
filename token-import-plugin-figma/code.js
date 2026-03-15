@@ -1,4 +1,4 @@
-// Token Porter — code.js
+// Token Collections Importer — code.js
 // Runs in the Figma plugin sandbox. Has access to figma.* API but no DOM.
 
 const COLLECTION_ORDER = [
@@ -18,116 +18,144 @@ figma.showUI(__html__, { width: 420, height: 600, themeColors: true })
 
 figma.ui.onmessage = async (msg) => {
   switch (msg.type) {
-    case 'IMPORT':       await handleImport(msg.collections); break
-    case 'EXPORT':       await handleExport(); break
+    case 'CHECK_CONFLICTS': await checkConflicts(msg.collections); break
+    case 'IMPORT':          await handleImport(msg.collections, msg.strategy); break
+    case 'EXPORT':          await handleExport(); break
     case 'GET_COLLECTIONS': sendCollectionsList(); break
   }
 }
 
+// ─── CONFLICT DETECTION ───────────────────────────────────────────────────────
+
+async function checkConflicts(collections) {
+  const localCollections = figma.variables.getLocalVariableCollections()
+  const localNames = localCollections.map(c => c.name)
+  const conflicts = collections.filter(c => localNames.includes(c.name)).map(c => c.name)
+  
+  figma.ui.postMessage({ type: 'CONFLICTS_FOUND', conflicts })
+}
+
 // ─── IMPORT ───────────────────────────────────────────────────────────────────
 
-async function handleImport(collections) {
+async function handleImport(collections, strategy = 'CREATE') {
+  const localCollections = figma.variables.getLocalVariableCollections()
   const results      = []  // per-collection summary
   const pendingAliases = [] // resolved after all variables exist
   const variableMap  = {} // 'CollectionName/token/path' → variableId
   const collectionMap = {} // collectionName → { collection, modeMap }
 
   try {
+    const collectionStats = {} // collName -> { success: Set(paths), errors: [], total: 0 }
+    const newVariableIds = new Set()
+
     for (const collData of collections) {
       const collName = collData.name
+      let collection
+      let modeMap = {}
+      collectionStats[collName] = { success: new Set(), errors: [], total: (collData.modes[0] && collData.modes[0].tokens) ? Object.keys(collData.modes[0].tokens).length : 0 }
 
-      // ── Create collection ──
-      const collection = figma.variables.createVariableCollection(collName)
-      const modeMap = {}
+      // ── Resolve Collection ──
+      const existing = localCollections.find(c => c.name === collName)
+      
+      if (strategy === 'UPDATE' && existing) {
+        collection = existing
+        collection.modes.forEach(m => modeMap[m.name] = m.modeId)
+      } else {
+        const finalName = (strategy === 'NEW' && existing) ? `${collName} (Imported)` : collName
+        collection = figma.variables.createVariableCollection(finalName)
+      }
 
-      // Sort modes into correct order (first = default)
-      const orderedModes = sortModes(collName, collData.modes.map(m => m.modeName))
+      // ── Sync Modes ──
+      const incomingModeNames = collData.modes.map(m => m.modeName)
+      const orderedModes = sortModes(collName, incomingModeNames)
 
-      let firstMode = true
-      for (const modeName of orderedModes) {
-        if (firstMode) {
-          const defaultId = collection.modes[0].modeId
-          collection.renameMode(defaultId, modeName)
-          modeMap[modeName] = defaultId
-          firstMode = false
-        } else {
-          modeMap[modeName] = collection.addMode(modeName)
+      if (strategy === 'UPDATE' && existing) {
+        for (const modeName of orderedModes) {
+          if (!modeMap[modeName]) {
+            modeMap[modeName] = collection.addMode(modeName)
+          }
+        }
+      } else {
+        let firstMode = true
+        for (const modeName of orderedModes) {
+          if (firstMode) {
+            const defaultId = collection.modes[0].modeId
+            collection.renameMode(defaultId, modeName)
+            modeMap[modeName] = defaultId
+            firstMode = false
+          } else {
+            modeMap[modeName] = collection.addMode(modeName)
+          }
         }
       }
 
       collectionMap[collName] = { collection, modeMap }
 
-      // ── Create variables and set primitive values ──
-      let tokenCount  = 0
-      const tokenErrors = []
+      // Build initial map for existing variables
+      const varsInColl = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id)
+      varsInColl.forEach(v => {
+        variableMap[`${collName}/${v.name}`] = v.id
+      })
 
-      // Iterate modes in the order they arrived (all modes share same paths)
+      // ── Create/Update variables ──
       for (const modeData of collData.modes) {
         const modeId = modeMap[modeData.modeName]
         if (modeId === undefined) continue
 
         for (const [path, token] of Object.entries(modeData.tokens)) {
           const varKey = `${collName}/${path}`
+          let variable
 
-          // Create variable only once (first mode encounter)
-          if (!variableMap[varKey]) {
-            try {
+          try {
+            if (!variableMap[varKey]) {
               const resolvedType = toFigmaType(token.type)
-              const variable = figma.variables.createVariable(path, collection, resolvedType)
+              variable = figma.variables.createVariable(path, collection, resolvedType)
               variableMap[varKey] = variable.id
-              tokenCount++
+              newVariableIds.add(variable.id)
+            } else {
+              variable = figma.variables.getVariableById(variableMap[varKey])
+            }
 
-              // Apply Metadata (Set once on creation for persistence)
-              if (token.scopes) {
-                const mapped = mapScopes(token.scopes, resolvedType)
-                if (mapped.length > 0) variable.scopes = mapped
-              }
-              if (token.hidden) {
-                variable.hiddenFromPublishing = true
-              }
-              if (token.codeSyntax) {
-                for (const [platform, value] of Object.entries(token.codeSyntax)) {
-                  // Ensure specific platform keys (WEB, ANDROID, iOS)
-                  const p = platform.toUpperCase()
-                  if (['WEB', 'ANDROID', 'IOS'].includes(p)) {
-                    variable.setVariableCodeSyntax(p, value)
-                  }
+            if (!variable) continue
+
+            // Metadata
+            if (token.scopes) {
+              const mapped = mapScopes(token.scopes, variable.resolvedType)
+              if (mapped.length > 0) variable.scopes = mapped
+            }
+            if (token.hidden !== undefined) variable.hiddenFromPublishing = token.hidden
+            if (token.codeSyntax) {
+              for (const [platform, value] of Object.entries(token.codeSyntax)) {
+                const p = platform.toUpperCase()
+                if (['WEB', 'ANDROID', 'IOS'].includes(p)) {
+                  variable.setVariableCodeSyntax(p, value)
                 }
               }
-            } catch (e) {
-              tokenErrors.push(`Create/Metadata failed — ${path}: ${e.message}`)
-              continue
             }
-          }
 
-          const variable = figma.variables.getVariableById(variableMap[varKey])
-          if (!variable) continue
-
-          if (token.alias) {
-            // Queue alias — target may not exist yet
-            pendingAliases.push({
-              varId: variable.id,
-              modeId,
-              targetName: token.alias.targetName,
-              targetSet:  token.alias.targetSet
-            })
-          } else {
-            try {
+            if (token.alias) {
+              pendingAliases.push({
+                varId: variable.id,
+                modeId,
+                targetName: token.alias.targetName,
+                targetSet:  token.alias.targetSet,
+                collName,
+                path
+              })
+            } else {
               variable.setValueForMode(modeId, toFigmaValue(token.type, token.value))
-            } catch (e) {
-              tokenErrors.push(`Value failed — ${path}: ${e.message}`)
+              collectionStats[collName].success.add(path)
             }
+          } catch (e) {
+            collectionStats[collName].errors.push(`${path}: ${e.message}`)
           }
         }
       }
-
-      results.push({ name: collName, tokenCount, errors: tokenErrors })
     }
 
-    // ── Resolve all aliases now that every variable exists ──
+    // ── Resolve Aliases ──
     const aliasErrors = []
-
-    for (const { varId, modeId, targetName, targetSet } of pendingAliases) {
+    for (const { varId, modeId, targetName, targetSet, collName, path } of pendingAliases) {
       const variable = figma.variables.getVariableById(varId)
       if (!variable) continue
 
@@ -135,17 +163,42 @@ async function handleImport(collections) {
       const targetId  = variableMap[targetKey]
 
       if (!targetId) {
-        aliasErrors.push(`Unresolved alias — ${variable.name} → ${targetName} (${targetSet})`)
+        const err = `Unresolved alias — ${variable.name} → ${targetName} (${targetSet})`
+        aliasErrors.push(err)
+        collectionStats[collName].errors.push(`${path}: Unresolved alias`)
+        // If it was a new variable and it has NO valid values, remove it
+        if (newVariableIds.has(varId)) {
+          try {
+             // Check if it has any other successful modes or values? 
+             // For simplicity, if the ALIAS fails and it's new, we prune it.
+             variable.remove()
+             newVariableIds.delete(varId)
+             delete variableMap[`${collName}/${path}`]
+          } catch(e){}
+        }
         continue
       }
 
       try {
         const targetVar = figma.variables.getVariableById(targetId)
         variable.setValueForMode(modeId, figma.variables.createVariableAlias(targetVar))
+        collectionStats[collName].success.add(path)
       } catch (e) {
-        aliasErrors.push(`Alias failed — ${variable.name}: ${e.message}`)
+        const err = `Alias failed — ${variable.name}: ${e.message}`
+        aliasErrors.push(err)
+        collectionStats[collName].errors.push(`${path}: ${e.message}`)
+        if (newVariableIds.has(varId)) {
+          try { variable.remove(); newVariableIds.delete(varId); delete variableMap[`${collName}/${path}`] } catch(ex){}
+        }
       }
     }
+
+    const results = Object.entries(collectionStats).map(([name, stats]) => ({
+      name,
+      successCount: stats.success.size,
+      totalCount: stats.total,
+      errors: stats.errors
+    }))
 
     figma.ui.postMessage({ type: 'IMPORT_COMPLETE', results, aliasErrors })
 

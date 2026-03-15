@@ -81,8 +81,9 @@ Wait for the response. Then:
 >
 > **How to open the console:**
 > - Chrome / Edge: Press `F12` or `Ctrl+Shift+J` (Windows) / `Cmd+Option+J` (Mac) → click the **Console** tab
+> - **Note**: If Chrome shows a security warning, type `allow pasting` first and press Enter.
 > - Then paste the entire script below and press Enter
-> - The result will be **copied to your clipboard automatically** — paste it here"
+> - Wait for the **"✅ Tokens copied"** message — then paste it here"
 
 **ACTION: Read and show the script from `scripts/token-extractor.js` in a code block.**
 
