@@ -9,9 +9,10 @@ import json, zipfile, os
 from io import BytesIO
 
 class DesignTokenGenerator:
-    def __init__(self, brand_name, syntax_format="css"):
+    def __init__(self, brand_name, syntax_format="css", platforms=None):
         self.brand_name = brand_name
         self.syntax_format = syntax_format
+        self.platforms = platforms or ["WEB"] # ["WEB", "ANDROID", "iOS"]
         self.output_files = {} # { "1. Collection/mode.json": {} }
         self.token_registry = {} # { "path/to/token": "VariableID:X:Y" }
         self.counters = {} # { namespace: count }
@@ -21,6 +22,7 @@ class DesignTokenGenerator:
         return {
             "brand_name": self.brand_name,
             "syntax_format": self.syntax_format,
+            "platforms": self.platforms,
             "output_files": self.output_files,
             "token_registry": self.token_registry,
             "counters": self.counters
@@ -29,7 +31,7 @@ class DesignTokenGenerator:
     @classmethod
     def from_dict(cls, data):
         """Reconstruct generator from a plain dict"""
-        obj = cls(data["brand_name"], data["syntax_format"])
+        obj = cls(data["brand_name"], data["syntax_format"], data.get("platforms", ["WEB"]))
         obj.output_files = data["output_files"]
         obj.token_registry = data["token_registry"]
         obj.counters = data["counters"]
@@ -88,7 +90,7 @@ class DesignTokenGenerator:
 
         ext = {
             "com.figma.variableId": vid,
-            "com.figma.codeSyntax": { "WEB": self.format_syntax(path) }
+            "com.figma.codeSyntax": self.get_full_syntax(path)
         }
         if type == "string":
             ext["com.figma.type"] = "string"
@@ -121,13 +123,28 @@ class DesignTokenGenerator:
 
         return { "$type": type, "$value": value, "$extensions": ext }
 
-    def format_syntax(self, path):
-        # Implement user choice: css, tailwind, camel, pascal, xml
+    def get_full_syntax(self, path):
+        """Builds the com.figma.codeSyntax object based on active platforms."""
+        syntax = {}
+        for platform in self.platforms:
+            # Keys are case-sensitive strings: WEB, ANDROID, iOS
+            syntax[platform] = self.format_syntax(path, platform)
+        return syntax
+
+    def format_syntax(self, path, platform="WEB"):
         # Bug 2 Fix: Prevent double hyphens or spaces
         p = path.replace('/', '-').replace(' ', '-')
         while '--' in p: p = p.replace('--', '-')
         
-        if self.syntax_format == "css": return f"--{p}"
+        # Default Logic:
+        # WEB: Applied chosen syntax_format (CSS, kebab, camel, etc.)
+        # ANDROID: Token path (e.g. column/count)
+        # iOS: Token path (e.g. column/count)
+        if platform == "WEB":
+            if self.syntax_format == "css": return f"--{p}"
+            return p
+        elif platform in ["ANDROID", "iOS"]:
+            return path # Return the path (e.g. column/count) as per user example
         return p
 
     def nest_token(self, tree, path, token):

@@ -298,17 +298,23 @@ String tokens **must** include `"com.figma.type": "string"`.
 
 ## codeSyntax Format
 
-Ask the user which format during questionnaire — label it "Code Syntax format for Variables (Tokens)?":
+The `com.figma.codeSyntax` object supports three platform keys: **WEB**, **ANDROID**, and **iOS** (case-sensitive). The AI populates these based on the **Product Type (Q2)** selection:
 
-| Format | Example |
+| Target Platform (Q2) | Generated codeSyntax Keys |
 |---|---|
-| CSS custom properties | `--color-button-primary-background` |
-| Tailwind | `color-button-primary-background` |
-| JavaScript / camelCase | `colorButtonPrimaryBackground` |
-| Android / XML | `color_button_primary_background` |
-| iOS / Swift | `ColorButtonPrimaryBackground` |
+| Web app | `{"WEB": "..."}` |
+| Mobile app | `{"ANDROID": "...", "iOS": "..."}` |
+| Web + Mobile | `{"WEB": "...", "ANDROID": "...", "iOS": "..."}` |
 
-Apply user's chosen format consistently to every `com.figma.codeSyntax.WEB` value. Apply prefix if user specified one (e.g. `--ds-color-button-primary-background`).
+### Format mapping by platform:
+
+| Format | Target | Example |
+|---|---|---|
+| CSS / Kebab | WEB | `--color-button-primary-background` |
+| android / XML | ANDROID | `color_button_primary_background` |
+| swift / Pascal | iOS | `ColorButtonPrimaryBackground` |
+
+Apply the chosen format from **Q17** (or the platform default if multiple are selected) consistently to every target. Apply prefix if user specified one (e.g. `--ds-color-button-primary-background`).
 
 ## $metadata Block
 

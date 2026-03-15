@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Porter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #1C1C1E;
+    --surface:   #2C2C2E;
+    --surface2:  #3A3A3C;
+    --border:    #3A3A3C;
+    --border2:   #48484A;
+    --text:      #FFFFFF;
+    --text2:     #EBEBF5CC;
+    --text3:     #8E8E93;
+    --accent:    #0A84FF;
+    --accent-bg: rgba(10,132,255,0.12);
+    --success:   #30D158;
+    --success-bg:rgba(48,209,88,0.1);
+    --warning:   #FF9F0A;
+    --warning-bg:rgba(255,159,10,0.1);
+    --error:     #FF453A;
+    --error-bg:  rgba(255,69,58,0.1);
+    --radius:    8px;
+    --radius-sm: 5px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ─────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 16px 0;
+    margin-bottom: 14px;
+  }
+
+  .logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo svg { width: 18px; height: 18px; fill: white; }
+
+  .header-text h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+
+  .header-text p {
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── Tabs ────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 16px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text3);
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Panels ──────────────────────────────────── */
+  .panel { display: none; padding: 0 16px 16px; }
+  .panel.active { display: block; }
+
+  /* ── Drop Zone ───────────────────────────────── */
+  .drop-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+
+  .drop-zone input {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-icon {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 10px;
+  }
+
+  .drop-icon svg { width: 18px; height: 18px; stroke: var(--text3); fill: none; }
+
+  .drop-zone h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .drop-zone p  { font-size: 11px; color: var(--text3); }
+
+  /* ── Preview ─────────────────────────────────── */
+  .preview {
+    margin-top: 12px;
+    display: none;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .collection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .collection-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .collection-row-left {
+    display: flex; align-items: center; gap: 8px;
+    min-width: 0;
+  }
+
+  .coll-icon {
+    width: 22px; height: 22px;
+    background: var(--surface2);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 700;
+  }
+
+  .coll-name {
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .coll-modes {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    background: var(--surface2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Buttons ─────────────────────────────────── */
+  .btn {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-top: 12px;
+  }
+
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #2196F3; }
+  .btn-export { background: var(--surface2); color: var(--text); }
+  .btn-export:hover:not(:disabled) { background: var(--border2); }
+
+  /* ── Results ─────────────────────────────────── */
+  .results {
+    margin-top: 12px;
+    display: none;
+  }
+
+  .result-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 3px;
+    font-size: 12px;
+  }
+
+  .result-ok  { background: var(--success-bg); }
+  .result-warn { background: var(--warning-bg); }
+  .result-err { background: var(--error-bg); }
+
+  .result-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+  .result-name { font-weight: 600; color: var(--text); }
+  .result-detail { color: var(--text3); margin-top: 1px; font-size: 11px; }
+
+  .result-count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .summary-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--success-bg);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(48,209,88,0.2);
+  }
+
+  .summary-bar.has-errors {
+    background: var(--warning-bg);
+    border-color: rgba(255,159,10,0.2);
+  }
+
+  .summary-bar .summary-label { font-size: 12px; font-weight: 600; }
+  .summary-bar .summary-count { font-size: 20px; font-weight: 700; color: var(--success); }
+  .summary-bar.has-errors .summary-count { color: var(--warning); }
+
+  /* ── Alert ───────────────────────────────────── */
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  .alert-error { background: var(--error-bg); color: var(--error); }
+  .alert-info  { background: var(--accent-bg); color: var(--accent); }
+
+  .alias-errors {
+    margin-top: 8px;
+    background: var(--warning-bg);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+
+  .alias-errors-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--warning);
+    margin-bottom: 6px;
+  }
+
+  .alias-error-item {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'SF Mono', Menlo, monospace;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,159,10,0.1);
+  }
+
+  .alias-error-item:last-child { border-bottom: none; }
+
+  /* ── Export tab ──────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--text3);
+  }
+
+  .empty-state svg { width: 32px; height: 32px; stroke: var(--border2); fill: none; margin-bottom: 10px; }
+  .empty-state p { font-size: 12px; }
+
+  .export-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 320px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .export-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .export-row-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .export-coll-name { font-size: 12px; font-weight: 500; }
+  .export-meta { font-size: 10px; color: var(--text3); }
+
+  /* ── Progress ────────────────────────────────── */
+  .progress {
+    display: none;
+    margin-top: 12px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .file-chosen {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-bg);
+    border: 1px solid rgba(10,132,255,0.3);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 0;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .file-chosen svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; flex-shrink: 0; }
+  .file-chosen span { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-clear {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .file-clear:hover { color: var(--text); }
+
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>Token Porter</h1>
+    <p>Import &amp; export Figma Variables ZIP</p>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('import')">Import</button>
+  <button class="tab" onclick="switchTab('export')">Export</button>
+</div>
+
+<!-- ─── IMPORT PANEL ─────────────────────────────────────────────── -->
+<div id="panel-import" class="panel active">
+
+  <!-- File chosen indicator -->
+  <div id="file-chosen" class="file-chosen" style="margin-bottom:10px;">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <span id="file-name"></span>
+    <button class="file-clear" onclick="clearFile()">✕</button>
+  </div>
+
+  <!-- Drop zone (hidden after file chosen) -->
+  <div id="drop-zone" class="drop-zone"
+    ondragover="event.preventDefault(); this.classList.add('dragover')"
+    ondragleave="this.classList.remove('dragover')"
+    ondrop="handleDrop(event)">
+    <input type="file" accept=".zip" id="zip-input" onchange="handleFile(this.files[0])">
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <h3>Drop your design-tokens.zip</h3>
+    <p>or click to browse</p>
+  </div>
+
+  <!-- Preview (shown after parsing) -->
+  <div id="preview" class="preview">
+    <div class="section-label">Collections to import</div>
+    <div id="collection-list" class="collection-list"></div>
+  </div>
+
+  <!-- Progress -->
+  <div id="progress" class="progress">
+    <div class="spinner"></div>
+    <span id="progress-text">Importing tokens…</span>
+  </div>
+
+  <!-- Import button -->
+  <button id="import-btn" class="btn btn-primary" onclick="doImport()" disabled>
+    Import All Collections
+  </button>
+
+  <!-- Error -->
+  <div id="parse-error" class="alert alert-error" style="display:none">
+    <span>⚠</span>
+    <span id="parse-error-msg"></span>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="results">
+    <div id="summary-bar" class="summary-bar">
+      <div>
+        <div class="summary-label">Total tokens imported</div>
+        <div id="summary-collections" style="font-size:11px;color:var(--text3);margin-top:2px;"></div>
+      </div>
+      <div id="summary-count" class="summary-count">0</div>
+    </div>
+    <div id="result-list"></div>
+    <div id="alias-errors-block" class="alias-errors" style="display:none">
+      <div class="alias-errors-title">⚠ Unresolved aliases</div>
+      <div id="alias-errors-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── EXPORT PANEL ─────────────────────────────────────────────── -->
+<div id="panel-export" class="panel">
+
+  <div id="export-empty" class="empty-state" style="display:none">
+    <svg viewBox="0 0 24 24" stroke-width="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="9" y1="21" x2="9" y2="9"/>
+    </svg>
+    <p>No local variable collections found.<br>Open a file that has Figma Variables.</p>
+  </div>
+
+  <div id="export-content" style="display:none">
+    <div class="section-label">Collections to export</div>
+    <div id="export-list" class="export-list"></div>
+    <button id="export-btn" class="btn btn-export" onclick="doExport()">
+      Export as ZIP
+    </button>
+  </div>
+
+  <div id="export-progress" class="progress">
+    <div class="spinner"></div>
+    <span>Building ZIP…</span>
+  </div>
+
+  <div id="export-error" class="alert alert-error" style="display:none">
+    <span>⚠</span>
+    <span id="export-error-msg"></span>
+  </div>
+
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let parsedCollections = null
+let activeTab = 'import'
+
+const MODE_ORDER = {
+  'Theme':     ['light', 'dark'],
+  'Responsive':['mobile', 'tablet', 'desktop'],
+  'Density':   ['comfortable', 'compact', 'spacious'],
+  'Layout':    ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['import','export'][i] === tab)
+  })
+  document.querySelectorAll('.panel').forEach((p, i) => {
+    p.classList.toggle('active', ['import','export'][i] === tab)
+  })
+  if (tab === 'export') {
+    parent.postMessage({ pluginMessage: { type: 'GET_COLLECTIONS' } }, '*')
+    document.getElementById('export-progress').style.display = 'none'
+  }
+}
+
+// ─── File handling ────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault()
+  document.getElementById('drop-zone').classList.remove('dragover')
+  const file = e.dataTransfer.files[0]
+  if (file && file.name.endsWith('.zip')) handleFile(file)
+  else showParseError('Please drop a .zip file.')
+}
+
+async function handleFile(file) {
+  if (!file) return
+  clearResults()
+  document.getElementById('parse-error').style.display = 'none'
+
+  try {
+    document.getElementById('progress').style.display = 'block'
+    document.getElementById('progress-text').textContent = 'Parsing ZIP…'
+
+    const zip = await JSZip.loadAsync(file)
+    const folders = {}
+
+    zip.forEach((relativePath, entry) => {
+      if (!entry.dir && relativePath.endsWith('.tokens.json')) {
+        const parts = relativePath.split('/')
+        if (parts.length >= 2) {
+          const folder = parts[0]
+          if (!folders[folder]) folders[folder] = []
+          folders[folder].push({ fileName: parts[parts.length - 1], entry })
+        }
+      }
+    })
+
+    if (Object.keys(folders).length === 0) {
+      throw new Error('No .tokens.json files found. Make sure your ZIP contains numbered folders (e.g. "1. Primitives/").')
+    }
+
+    // Sort folders by number prefix
+    const sortedFolders = Object.entries(folders).sort(([a], [b]) => {
+      return (parseInt(a) || 999) - (parseInt(b) || 999)
+    })
+
+    const collections = []
+    for (const [folderName, files] of sortedFolders) {
+      const collName = folderName.replace(/^\d+\.\s*/, '').trim()
+
+      // Sort mode files in preferred order
+      const sorted = sortModeFiles(collName, files)
+
+      const modes = []
+      for (const { fileName, entry } of sorted) {
+        const modeName = fileName.replace('.tokens.json', '')
+        const jsonStr  = await entry.async('string')
+        const json     = JSON.parse(jsonStr)
+        const tokens   = flattenTokens(json)
+        modes.push({ modeName, tokens })
+      }
+
+      collections.push({ name: collName, modes, tokenCount: Object.keys(modes[0]?.tokens || {}).length })
+    }
+
+    parsedCollections = collections
+    document.getElementById('progress').style.display = 'none'
+
+    // Show file name
+    document.getElementById('file-name').textContent = file.name
+    document.getElementById('file-chosen').style.display = 'flex'
+    document.getElementById('drop-zone').style.display = 'none'
+
+    showPreview(collections)
+    document.getElementById('import-btn').disabled = false
+
+  } catch (e) {
+    document.getElementById('progress').style.display = 'none'
+    showParseError(e.message)
+  }
+}
+
+function clearFile() {
+  parsedCollections = null
+  document.getElementById('file-chosen').style.display = 'none'
+  document.getElementById('drop-zone').style.display = 'block'
+  document.getElementById('zip-input').value = ''
+  document.getElementById('preview').style.display = 'none'
+  document.getElementById('import-btn').disabled = true
+  clearResults()
+}
+
+// ─── Token parsing ────────────────────────────────────────────────────────────
+function flattenTokens(obj, prefix) {
+  const result = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === '$metadata') continue
+    if (!value || typeof value !== 'object') continue
+    const path = prefix ? `${prefix}/${key}` : key
+
+    if ('$type' in value && '$value' in value) {
+      // It's a token leaf
+      const ext   = value.$extensions || {}
+      const alias = ext['com.figma.aliasData']
+      result[path] = {
+        type:  value.$type,
+        value: value.$value,
+        alias: alias
+          ? { targetName: alias.targetVariableName, targetSet: alias.targetVariableSetName }
+          : null
+      }
+    } else {
+      // It's a group — recurse
+      Object.assign(result, flattenTokens(value, path))
+    }
+  }
+  return result
+}
+
+function sortModeFiles(collName, files) {
+  const pref = MODE_ORDER[collName]
+  if (!pref) return files
+  return [...files].sort((a, b) => {
+    const mA = a.fileName.replace('.tokens.json', '')
+    const mB = b.fileName.replace('.tokens.json', '')
+    const iA = pref.indexOf(mA); const iB = pref.indexOf(mB)
+    if (iA === -1 && iB === -1) return mA.localeCompare(mB)
+    if (iA === -1) return 1; if (iB === -1) return -1
+    return iA - iB
+  })
+}
+
+// ─── Preview ──────────────────────────────────────────────────────────────────
+function showPreview(collections) {
+  const list = document.getElementById('collection-list')
+  list.innerHTML = ''
+
+  collections.forEach((coll, i) => {
+    const row = document.createElement('div')
+    row.className = 'collection-row'
+    const modesStr = coll.modes.map(m => m.modeName).join(', ')
+
+    row.innerHTML = `
+      <div class="collection-row-left">
+        <div class="coll-icon">${i + 1}</div>
+        <div>
+          <div class="coll-name">${coll.name}</div>
+          <div class="coll-modes">${modesStr}</div>
+        </div>
+      </div>
+      <div class="badge">${coll.tokenCount} tokens</div>
+    `
+    list.appendChild(row)
+  })
+
+  document.getElementById('preview').style.display = 'block'
+}
+
+// ─── Import ───────────────────────────────────────────────────────────────────
+function doImport() {
+  if (!parsedCollections) return
+
+  document.getElementById('import-btn').disabled = true
+  document.getElementById('results').style.display = 'none'
+  document.getElementById('parse-error').style.display = 'none'
+  document.getElementById('progress').style.display = 'block'
+  document.getElementById('progress-text').textContent = 'Importing collections…'
+
+  parent.postMessage({ pluginMessage: { type: 'IMPORT', collections: parsedCollections } }, '*')
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+function showImportResults(results, aliasErrors) {
+  document.getElementById('progress').style.display = 'none'
+  document.getElementById('import-btn').disabled = false
+
+  const totalTokens = results.reduce((s, r) => s + r.tokenCount, 0)
+  const totalErrors = results.reduce((s, r) => s + r.errors.length, 0) + aliasErrors.length
+  const hasIssues   = totalErrors > 0
+
+  const summaryBar = document.getElementById('summary-bar')
+  summaryBar.classList.toggle('has-errors', hasIssues)
+  document.getElementById('summary-count').textContent = totalTokens.toLocaleString()
+  document.getElementById('summary-collections').textContent =
+    `${results.length} collection${results.length !== 1 ? 's' : ''} created`
+
+  const list = document.getElementById('result-list')
+  list.innerHTML = ''
+
+  for (const r of results) {
+    const hasErr = r.errors.length > 0
+    const row = document.createElement('div')
+    row.className = `result-row ${hasErr ? 'result-warn' : 'result-ok'}`
+    row.innerHTML = `
+      <div class="result-icon">${hasErr ? '⚠️' : '✓'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="result-name">${r.name}</div>
+        ${r.errors.length > 0 ? `<div class="result-detail">${r.errors[0]}${r.errors.length > 1 ? ` (+${r.errors.length - 1} more)` : ''}</div>` : ''}
+      </div>
+      <div class="result-count">${r.tokenCount} tokens</div>
+    `
+    list.appendChild(row)
+  }
+
+  // Alias errors
+  if (aliasErrors.length > 0) {
+    const block = document.getElementById('alias-errors-block')
+    const errList = document.getElementById('alias-errors-list')
+    block.style.display = 'block'
+    errList.innerHTML = aliasErrors
+      .map(e => `<div class="alias-error-item">${e}</div>`)
+      .join('')
+  }
+
+  document.getElementById('results').style.display = 'block'
+}
+
+function clearResults() {
+  document.getElementById('results').style.display = 'none'
+  document.getElementById('alias-errors-block').style.display = 'none'
+  document.getElementById('result-list').innerHTML = ''
+  document.getElementById('alias-errors-list').innerHTML = ''
+}
+
+function showParseError(msg) {
+  document.getElementById('parse-error-msg').textContent = msg
+  document.getElementById('parse-error').style.display = 'flex'
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function renderExportList(collections) {
+  if (!collections || collections.length === 0) {
+    document.getElementById('export-empty').style.display = 'block'
+    document.getElementById('export-content').style.display = 'none'
+    return
+  }
+
+  document.getElementById('export-empty').style.display = 'none'
+  document.getElementById('export-content').style.display = 'block'
+
+  const list = document.getElementById('export-list')
+  list.innerHTML = ''
+
+  const COLL_ORDER = ['Primitives','Theme','Semantic','Responsive','Density','Layout','Effects','Typography','Component Colors','Component Dimensions']
+  const sorted = [...collections].sort((a, b) => {
+    const ai = COLL_ORDER.indexOf(a.name); const bi = COLL_ORDER.indexOf(b.name)
+    if (ai === -1 && bi === -1) return a.name.localeCompare(b.name)
+    if (ai === -1) return 1; if (bi === -1) return -1
+    return ai - bi
+  })
+
+  sorted.forEach((coll, i) => {
+    const row = document.createElement('div')
+    row.className = 'export-row'
+    row.innerHTML = `
+      <div class="export-row-left">
+        <div class="coll-icon">${i + 1}</div>
+        <div>
+          <div class="export-coll-name">${coll.name}</div>
+          <div class="export-meta">${coll.modes.join(', ')}</div>
+        </div>
+      </div>
+      <div class="badge">${coll.tokenCount} tokens</div>
+    `
+    list.appendChild(row)
+  })
+}
+
+async function doExport() {
+  document.getElementById('export-btn').disabled = true
+  document.getElementById('export-progress').style.display = 'block'
+  document.getElementById('export-error').style.display = 'none'
+  parent.postMessage({ pluginMessage: { type: 'EXPORT' } }, '*')
+}
+
+async function buildAndDownloadZip(exportData) {
+  const zip = new JSZip()
+
+  for (const { folder, modes } of exportData) {
+    for (const { modeName, json } of modes) {
+      zip.file(`${folder}/${modeName}.tokens.json`, json)
+    }
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url
+  a.download = 'design-tokens.zip'
+  a.click()
+  URL.revokeObjectURL(url)
+
+  document.getElementById('export-progress').style.display = 'none'
+  document.getElementById('export-btn').disabled = false
+}
+
+// ─── Plugin message handler ───────────────────────────────────────────────────
+window.onmessage = async (event) => {
+  const msg = event.data.pluginMessage
+  if (!msg) return
+
+  switch (msg.type) {
+    case 'IMPORT_COMPLETE':
+      showImportResults(msg.results, msg.aliasErrors)
+      break
+
+    case 'IMPORT_ERROR':
+      document.getElementById('progress').style.display = 'none'
+      document.getElementById('import-btn').disabled = false
+      showParseError(`Import failed: ${msg.message}`)
+      break
+
+    case 'COLLECTIONS_LIST':
+      renderExportList(msg.collections)
+      break
+
+    case 'EXPORT_DATA':
+      await buildAndDownloadZip(msg.exportData)
+      break
+
+    case 'EXPORT_ERROR':
+      document.getElementById('export-progress').style.display = 'none'
+      document.getElementById('export-btn').disabled = false
+      document.getElementById('export-error-msg').textContent = msg.message
+      document.getElementById('export-error').style.display = 'flex'
+      break
+  }
+}
+</script>
+</body>
+</html>

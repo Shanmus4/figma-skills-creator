@@ -1,13 +1,14 @@
 ## Dynamic Questionnaire Rules — Turns 4–9 (Read with Load Stage 1)
 
 > - **PROACTIVE RECOMMENDATIONS (MANDATORY)**: Based on the Brand & Context from Turn 3, act as a design expert.
->     - **Label injection**: Inject your recommendation directly into the question string. Format: `[Rec: [Value]] [Original Question]`. (e.g. `[Rec: Blue] Primary brand colour?`)
+>     - **Label injection**: Inject your recommendation directly into the question string. Format: `[Original Question] [Rec: [Value]]`. (e.g. `Primary brand colour? [Rec: Blue]`)
 >     - **Option tagging**: Use `[Recommended for [Project Context]]` for the corresponding dropdown option.
 > - **Never skip a question.** Every question in Turns 4–9 must still be asked, even if you can infer the answer. The user must always have the chance to confirm or change.
 > - **Contextualize the question:** Tell the user what you found. (e.g., *"I see your current system only has a Light mode."* or *"I see these tokens came from a Web project."*)
 > - **Inject dynamic choices (LITERAL STRINGS):** Modify your dropdown choices to include keeping their existing setup versus expanding/changing it. Use the format: `Keep existing: [Feature Name] (e.g. [Full Token Example])`. Never shorten or summarize the examples — the full example is the pattern being demonstrated. (e.g. `Keep existing: camelCase (colorButtonPrimary)`).
 > - **Architectural Dependencies:** Some questions depend on previous choices. (e.g., If the user chose a **2-layer architecture** in Q7, do **NOT** offer `Component-first` naming in Q18, as 2-layer systems do not have a dedicated component layer).
 > - Apply this intelligence to Product Type (Q2), Colours (Q3–Q6), Layer Architecture (Q7), Code Syntax (Q17), and Token naming (Q18). Adapt the dropdown OPTIONS based on what you learned — but still present the dropdown and wait for the user's selection.
+- **Platform Mapping (Q2 Logic)**: Map the selection to `platforms` list: `Web` or `Desktop` -> `["WEB"]`; `Mobile` -> `["ANDROID", "iOS"]`; `Web + Mobile` -> `["WEB", "ANDROID", "iOS"]`.
 
 
 ### TURN 4 — Product Type + Colours (dropdowns)
@@ -235,7 +236,8 @@ Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
 2. **Step 2 — Script**: 
     - **A. Shared Utility**: Write the code from `references/06-generator-utility.md` into a file named `generator_utils.py`.
     - **B. Generation Script**: Write your generation script (Turn A, B, or C). Import the generator using `from generator_utils import DesignTokenGenerator`. 
-    - **C. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary. In the next turn, load the dict and reconstruct with `gen = DesignTokenGenerator.from_dict(pickle.load(f))`. This removes all module-path dependencies and ensures the state is always loadable regardless of the script's `__main__` context.
+    - **C. Platform Initialization**: Initialize with `DesignTokenGenerator(brand_name, syntax_format, platforms)`. Ensure the `platforms` list matches the mappings from Q2.
+    - **D. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary. In the next turn, load the dict and reconstruct with `gen = DesignTokenGenerator.from_dict(pickle.load(f))`. This removes all module-path dependencies and ensures the state is always loadable regardless of the script's `__main__` context.
     - **D. Loop**: Loop through your `brand_data` calling `create_token` and `nest_token`. Use the self-correcting prefix stripping and backfilling guards built into the utility.
 3. **Step 3 — Output**: Execute and output the ZIP.
     - **Zero narration during generation**: Do not explain the output or summarize what was generated. Deliver the ZIP widget, then proceed to Turn D (token count table). The follow-up conversation in Phase 6 of the handoff file happens after this.
