@@ -31,7 +31,18 @@ async function checkConflicts(collections) {
   const localCollections = figma.variables.getLocalVariableCollections()
   const localVars = figma.variables.getLocalVariables()
   const varNameById = {}
-  localVars.forEach(v => varNameById[v.id] = v.name)
+  const varCollById = {}
+  
+  // Build lookup maps for all local variables
+  for (const coll of localCollections) {
+    for (const vid of coll.variableIds) {
+      const v = localVars.find(lv => lv.id === vid)
+      if (v) {
+        varNameById[vid] = v.name
+        varCollById[vid] = coll.name
+      }
+    }
+  }
   
   const analysis = collections.map(collData => {
     const existing = localCollections.find(c => c.name === collData.name)
@@ -39,30 +50,45 @@ async function checkConflicts(collections) {
       return { name: collData.name, status: 'NEW', newCount: collData.tokenCount, changedCount: 0, sameCount: 0 }
     }
     
-    let newCount = 0, changedCount = 0, sameCount = 0
+    let newCount = 0, changedCount = 0, sameCount = 0, removedCount = 0
     const existingVars = localVars.filter(v => v.variableCollectionId === existing.id)
     
-    // Map local modes for comparison
+    // Normalize both sets for reliable comparison
+    const existingVarsByName = {}
+    existingVars.forEach(v => {
+      const normName = v.name.trim()
+      existingVarsByName[normName] = v
+    })
+
+    const allIncomingPaths = new Set()
+    collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => {
+      if (p && p.trim()) allIncomingPaths.add(p.trim())
+    }))
+
+    const localModeNames = existing.modes.map(m => m.name.toLowerCase())
+    const incomingModeNames = collData.modes.map(m => m.modeName.toLowerCase())
+    
+    // Check for mode changes
+    const modesAdded = incomingModeNames.filter(name => !localModeNames.includes(name)).length
+    const modesRemoved = localModeNames.filter(name => !incomingModeNames.includes(name)).length
+    const modeMismatch = modesAdded > 0 || modesRemoved > 0 ? { added: modesAdded, removed: modesRemoved } : null
+
     const localModeMap = {}
     existing.modes.forEach(m => localModeMap[m.name.toLowerCase()] = m.modeId)
 
-    // Collect all unique variable paths defined in ANY incoming mode
-    const allIncomingPaths = new Set()
-    collData.modes.forEach(m => Object.keys(m.tokens).forEach(p => allIncomingPaths.add(p)))
-
+    // Check for New and Changed
     for (const path of allIncomingPaths) {
-      const local = existingVars.find(v => v.name === path)
+      const local = existingVarsByName[path]
       if (!local) {
         newCount++
       } else {
-        // Compare across all modes present in the ZIP
         let hasMismatch = false
         for (const incomingMode of collData.modes) {
           const modeId = localModeMap[incomingMode.modeName.toLowerCase()] || existing.modes[0].modeId
           const localValue = local.valuesByMode[modeId]
           const token = incomingMode.tokens[path]
           
-          if (token && !isBetterEqual(localValue, token, local.resolvedType, varNameById)) {
+          if (token && !isBetterEqual(localValue, token, local.resolvedType, varNameById, varCollById)) {
             hasMismatch = true
             break
           }
@@ -71,19 +97,40 @@ async function checkConflicts(collections) {
         else sameCount++
       }
     }
+
+    // Check for Removed (Figma has it, ZIP doesn't)
+    for (const normName in existingVarsByName) {
+      if (!allIncomingPaths.has(normName)) {
+        removedCount++
+      }
+    }
     
-    return { name: collData.name, status: 'CONFLICT', newCount, changedCount, sameCount }
+    return { 
+      name: collData.name, 
+      status: 'CONFLICT', 
+      newCount, 
+      changedCount, 
+      sameCount, 
+      removedCount,
+      modeMismatch
+    }
   })
   
   figma.ui.postMessage({ type: 'CONFLICTS_FOUND', analysis })
 }
 
-function isBetterEqual(localValue, incomingToken, type, varNameById) {
-  if (localValue && localValue.type === 'VARIABLE_ALIAS') {
-    if (!incomingToken.alias) return false
+function isBetterEqual(localValue, incomingToken, type, varNameById, varCollById) {
+  const localIsAlias = localValue && localValue.type === 'VARIABLE_ALIAS'
+  const incomingIsAlias = !!incomingToken.alias
+
+  // Type mismatch (one is alias, other is raw)
+  if (localIsAlias !== incomingIsAlias) return false
+
+  if (localIsAlias) {
     const localTargetName = varNameById[localValue.id] || ''
-    // Corrected targetName vs targetVariableName to match ui.html parser
-    return localTargetName === incomingToken.alias.targetName
+    const localTargetSet  = varCollById[localValue.id] || ''
+    return localTargetName === incomingToken.alias.targetName && 
+           localTargetSet  === incomingToken.alias.targetSet
   }
 
   const incomingValue = toFigmaValue(incomingToken.type, incomingToken.value)
@@ -110,6 +157,14 @@ async function handleImport(collections, strategy = 'CREATE') {
   try {
     const collectionStats = {} // collName -> { success: Set(paths), errors: [], total: 0 }
     const newVariableIds = new Set()
+
+    // NEW: Pre-populate variableMap with ALL existing local variables to support cross-collection aliases
+    const allLocalCollections = figma.variables.getLocalVariableCollections()
+    const allLocalVars = figma.variables.getLocalVariables()
+    allLocalVars.forEach(v => {
+      const coll = allLocalCollections.find(c => c.id === v.variableCollectionId)
+      if (coll) variableMap[`${coll.name}/${v.name}`] = v.id
+    })
 
     for (const collData of collections) {
       const collName = collData.name
@@ -153,12 +208,6 @@ async function handleImport(collections, strategy = 'CREATE') {
       }
 
       collectionMap[collName] = { collection, modeMap }
-
-      // Build initial map for existing variables
-      const varsInColl = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id)
-      varsInColl.forEach(v => {
-        variableMap[`${collName}/${v.name}`] = v.id
-      })
 
       // ── Create/Update variables ──
       for (const modeData of collData.modes) {

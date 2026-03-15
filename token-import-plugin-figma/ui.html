@@ -6,7 +6,7 @@
 <title>Token Collections Importer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
     :root {
@@ -24,7 +24,7 @@
         --tag-green: #10b981;
         --tag-black: #000000;
 
-        --font-sans: 'Instrument Sans', sans-serif;
+        --font-main: 'JetBrains Mono', monospace;
         --font-mono: 'JetBrains Mono', monospace;
     }
 
@@ -37,7 +37,7 @@
 
     body {
         background-color: var(--canvas-bg);
-        font-family: var(--font-sans);
+        font-family: var(--font-main);
         color: var(--text-main);
         display: flex;
         justify-content: center;
@@ -81,11 +81,11 @@
     }
     
     .main-title {
-        font-family: var(--font-sans);
-        font-size: 28px;
-        font-weight: 800;
+        font-family: var(--font-main);
+        font-size: 24px;
+        font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: -1.2px;
+        letter-spacing: -1px;
         line-height: 1;
         color: var(--panel-dark);
     }
@@ -93,7 +93,7 @@
     .tabs-row { display: flex; gap: 0; }
     .tab {
         padding: 8px 16px;
-        font-family: var(--font-sans);
+        font-family: var(--font-main);
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
@@ -164,7 +164,7 @@
     .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
     .upload-icon { font-family: var(--font-mono); font-size: 24px; margin-bottom: 12px; }
-    .upload-title { font-family: var(--font-sans); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .upload-title { font-family: var(--font-main); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .upload-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); font-weight: 700; }
 
     /* ── Results Table ── */
@@ -184,12 +184,12 @@
     .result-row summary::-webkit-details-marker { display: none; }
     .result-row summary:hover { background: rgba(0,0,0,0.02); }
     
-    .col-name { font-family: var(--font-sans); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-name { font-family: var(--font-main); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .col-size { font-family: var(--font-mono); color: var(--text-muted); font-size: 10px; font-weight: 700; }
     .col-status { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
     .dropdown-arrow { font-size: 8px; opacity: 0.5; }
     
-    .status-tag { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 2px 6px; text-transform: uppercase; color: var(--text-inverse); }
+    .status-tag { font-size: 10px; font-weight: 800; padding: 4px 10px; text-transform: uppercase; color: var(--text-inverse); }
     .tag-blue { background: var(--tag-blue); }
     .tag-green { background: var(--tag-green); }
     .tag-red { background: var(--tag-red); }
@@ -223,6 +223,8 @@
     button:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
     /* ── Parsing Error ── */
+    .primary { background: #000; color: #fff; border: 2px solid #000; font-size: 15px; font-weight: 800; }
+    .secondary { background: #fff; color: #000; border: 2px solid #000; font-size: 15px; font-weight: 800; }
     #parse-error {
         border: 1px solid var(--tag-red); background: #fff5f5;
         padding: 12px; color: var(--tag-red); font-family: var(--font-mono);
@@ -267,10 +269,10 @@
             <!-- IMPORT PANEL -->
             <div id="panel-import" class="panel active">
                 <div id="drop-zone" class="upload-zone">
-                    <input type="file" accept=".zip,.json" id="file-input" onchange="handleFile(this.files[0])">
+                    <input type="file" accept=".zip" id="file-input" onchange="handleFile(this.files[0])">
                     <div class="upload-icon">[+]</div>
-                    <div class="upload-title">Drop Tokens</div>
-                    <div class="upload-meta">ZIP / JSON ONLY</div>
+                    <p class="upload-title">Drop Design Tokens ZIP</p>
+                    <p class="upload-meta">Upload a ZIP containing Collections</p>
                 </div>
 
                 <div id="file-chosen" style="display:none; align-items:center; justify-content:space-between; border:1px solid #000; padding:10px; background:var(--tag-yellow);">
@@ -286,9 +288,9 @@
                 </div>
 
                 <div id="conflict-area" style="display:none; flex-direction:column; gap:16px;">
-                    <div style="border:2px solid #000; background:#f9f9f9; padding:16px;">
-                        <div style="font-weight:900; font-size:12px; margin-bottom:12px; color: #000; letter-spacing: 0.5px; border-bottom: 2px solid #000; padding-bottom: 6px;">CONFLICTS_DETECTED</div>
-                        <div id="conflict-list" style="font-family:var(--font-mono); font-size:10px; font-weight:700;"></div>
+                    <div style="background:#fcfcfc; padding:16px; border:1px solid #eee; border-radius: 8px;">
+                        <div style="font-weight:900; font-size:18px; margin-bottom:16px; color: #000; letter-spacing: -0.5px; border-bottom: 2px solid #000; padding-bottom: 8px;">CONFLICTS_DETECTED</div>
+                        <div id="conflict-list" style="font-size:11px;"></div>
                     </div>
                     <div class="btn-row">
                         <button class="primary" onclick="doImport('UPDATE')">Merge Update</button>
@@ -393,17 +395,15 @@ async function handleFile(file) {
     try {
         if (typeof JSZip === 'undefined') throw new Error("JSZip_NOT_LOADED");
         let collections = [];
-        if (file.name.endsWith('.json')) {
-            const tokens = flattenTokens(JSON.parse(await file.text()));
-            collections.push({ name: file.name.replace('.json', ''), modes: [{ modeName: 'Value', tokens }], tokenCount: Object.keys(tokens).length });
-        } else if (file.name.endsWith('.zip')) {
+        if (file.name.endsWith('.zip')) {
             const buffer = await file.arrayBuffer();
             const zip = await JSZip.loadAsync(buffer);
             const folders = {};
             zip.forEach((path, entry) => {
                 if (!entry.dir && (path.endsWith('.tokens.json') || path.endsWith('.json'))) {
                     const parts = path.split('/');
-                    const folder = parts.length > 1 ? parts[0] : 'Root';
+                    const zipFallbackName = file.name.replace(/\.zip$/i, '').toUpperCase();
+                    const folder = parts.length > 1 ? parts[0] : zipFallbackName;
                     if (!folders[folder]) folders[folder] = [];
                     folders[folder].push({ name: parts.pop(), entry });
                 }
@@ -484,22 +484,45 @@ window.onmessage = (e) => {
         document.getElementById('import-bar').style.width = '0%';
         const analysis = msg.analysis;
         const conflicts = analysis.filter(a => a.status === 'CONFLICT');
-        if (conflicts.length > 0) {
+        const newColls = analysis.filter(a => a.status === 'NEW');
+
+        if (conflicts.length > 0 || newColls.length > 0) {
             document.getElementById('conflict-area').style.display = 'flex';
-            document.getElementById('conflict-list').innerHTML = `
-                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
-                    ${conflicts.map(c => `
-                        <div style="border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 8px;">
-                            <div style="font-weight: 800; text-transform: uppercase; font-size: 11px; margin-bottom: 6px; color: #000; letter-spacing: 0.5px;">${c.name}</div>
-                            <div style="display: flex; gap: 12px; font-family: var(--font-mono); font-size: 10px; font-weight: 700;">
-                                <div style="color: #1e40af;">[+] ${c.newCount} NEW</div>
-                                <div style="color: #991b1b;">[*] ${c.changedCount} UPDATE</div>
-                                <div style="color: #166534;">[=] ${c.sameCount} SAME</div>
-                            </div>
+            let html = '<div style="margin-top: 12px; display: flex; flex-direction: column; gap: 16px;">';
+            
+            conflicts.forEach(c => {
+                html += `
+                    <div style="border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div style="font-weight: 900; text-transform: uppercase; font-size: 11px; margin-bottom: 8px; color: #000;">${c.name}</div>
+                        
+                        ${c.modeMismatch ? `
+                        <div style="background: rgba(0,0,0,0.03); padding: 6px; font-size: 9px; font-weight: 800; margin-bottom: 8px; display: flex; gap: 8px;">
+                            ${c.modeMismatch.added > 0 ? `<span style="color: #1e40af;">+ ${c.modeMismatch.added} NEW MODES</span>` : ''}
+                            ${c.modeMismatch.removed > 0 ? `<span style="color: #991b1b;">- ${c.modeMismatch.removed} LESS MODES</span>` : ''}
                         </div>
-                    `).join('')}
-                </div>
-            `;
+                        ` : ''}
+
+                        <div style="display: flex; gap: 12px; font-size: 9px; font-weight: 800; white-space: nowrap;">
+                            <div style="display:flex; align-items:center; gap:4px; color: #1e40af;"><span style="width:7px; height:7px; border-radius:50%; background:#1e40af;"></span> ${c.newCount} NEW</div>
+                            <div style="display:flex; align-items:center; gap:4px; color: #991b1b;"><span style="width:7px; height:7px; border-radius:50%; background:#991b1b;"></span> ${c.changedCount} UPDATE</div>
+                            <div style="display:flex; align-items:center; gap:4px; color: #166534;"><span style="width:7px; height:7px; border-radius:50%; background:#166534;"></span> ${c.sameCount} SAME</div>
+                            <div style="display:flex; align-items:center; gap:4px; color: #d97706;"><span style="width:7px; height:7px; border-radius:50%; background:#d97706;"></span> ${c.removedCount} LESS</div>
+                        </div>
+                    </div>`;
+            });
+
+            if (newColls.length > 0) {
+                html += `
+                    <div style="background: #f0f9ff; border: 1px dashed #0ba5e9; padding: 12px;">
+                        <div style="font-weight: 900; font-size: 10px; margin-bottom: 4px; color: #0369a1;">+ NEW COLLECTIONS DETECTED</div>
+                        <div style="font-family: var(--font-mono); font-size: 9px; color: #0369a1;">
+                            ${newColls.map(n => n.name).join(', ')}
+                        </div>
+                    </div>`;
+            }
+
+            html += '</div>';
+            document.getElementById('conflict-list').innerHTML = html;
         } else {
             document.getElementById('preview-area').style.display = 'block';
         }
