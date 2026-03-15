@@ -9,24 +9,24 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:        #1C1C1E;
-    --surface:   #2C2C2E;
-    --surface2:  #3A3A3C;
-    --border:    #3A3A3C;
-    --border2:   #48484A;
+    --bg:        #000000;
+    --surface:   #121212;
+    --surface2:  #1E1E1E;
+    --border:    #2C2C2C;
+    --border2:   #3A3A3A;
     --text:      #FFFFFF;
-    --text2:     #EBEBF5CC;
-    --text3:     #8E8E93;
-    --accent:    #0A84FF;
-    --accent-bg: rgba(10,132,255,0.12);
-    --success:   #30D158;
-    --success-bg:rgba(48,209,88,0.1);
-    --warning:   #FF9F0A;
-    --warning-bg:rgba(255,159,10,0.1);
+    --text2:     #A1A1A1;
+    --text3:     #717171;
+    --accent:    #FFFFFF;
+    --accent-bg: rgba(255,255,255,0.08);
+    --success:   #FFFFFF;
+    --success-bg:rgba(255,255,255,0.05);
+    --warning:   #FFFFFF;
+    --warning-bg:rgba(255,255,255,0.1);
     --error:     #FF453A;
     --error-bg:  rgba(255,69,58,0.1);
-    --radius:    8px;
-    --radius-sm: 5px;
+    --radius:    6px;
+    --radius-sm: 4px;
   }
 
   body {
@@ -222,9 +222,9 @@
   .btn:active { transform: scale(0.98); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover:not(:disabled) { background: #2196F3; }
-  .btn-export { background: var(--surface2); color: var(--text); }
+  .btn-primary { background: var(--accent); color: #000000; }
+  .btn-primary:hover:not(:disabled) { background: #E1E1E1; }
+  .btn-export { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
   .btn-export:hover:not(:disabled) { background: var(--border2); }
 
   /* ── Results ─────────────────────────────────── */
@@ -408,8 +408,10 @@
 <!-- Header -->
 <div class="header">
   <div class="logo">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 10L12 15L17 10" />
+      <path d="M12 15V3" />
+      <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" />
     </svg>
   </div>
   <div class="header-text">
@@ -654,7 +656,10 @@ function flattenTokens(obj, prefix) {
         value: value.$value,
         alias: alias
           ? { targetName: alias.targetVariableName, targetSet: alias.targetVariableSetName }
-          : null
+          : null,
+        scopes: ext['com.figma.scopes'] || null,
+        codeSyntax: ext['com.figma.codeSyntax'] || null,
+        hidden: ext['com.figma.hiddenFromPublishing'] || false
       }
     } else {
       // It's a group — recurse

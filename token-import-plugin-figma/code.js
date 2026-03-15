@@ -76,8 +76,26 @@ async function handleImport(collections) {
               const variable = figma.variables.createVariable(path, collection, resolvedType)
               variableMap[varKey] = variable.id
               tokenCount++
+
+              // Apply Metadata (Set once on creation for persistence)
+              if (token.scopes) {
+                const mapped = mapScopes(token.scopes, resolvedType)
+                if (mapped.length > 0) variable.scopes = mapped
+              }
+              if (token.hidden) {
+                variable.hiddenFromPublishing = true
+              }
+              if (token.codeSyntax) {
+                for (const [platform, value] of Object.entries(token.codeSyntax)) {
+                  // Ensure specific platform keys (WEB, ANDROID, iOS)
+                  const p = platform.toUpperCase()
+                  if (['WEB', 'ANDROID', 'IOS'].includes(p)) {
+                    variable.setVariableCodeSyntax(p, value)
+                  }
+                }
+              }
             } catch (e) {
-              tokenErrors.push(`Create failed — ${path}: ${e.message}`)
+              tokenErrors.push(`Create/Metadata failed — ${path}: ${e.message}`)
               continue
             }
           }
@@ -239,6 +257,76 @@ function sortModeObjects(collName, modes) {
 
 function toFigmaType(type) {
   return { color: 'COLOR', number: 'FLOAT', string: 'STRING', boolean: 'BOOLEAN' }[type] || 'FLOAT'
+}
+
+function mapScopes(rawScopes, figmaType) {
+  if (!rawScopes || !Array.isArray(rawScopes)) return []
+  if (rawScopes.includes('ALL')) return [] // Defaults to all in Figma if empty
+
+  const mapped = new Set()
+  for (const s of rawScopes) {
+    const scope = s.toUpperCase()
+    
+    // Direct matches or specific mappings
+    if (scope === 'TEXT') {
+      mapped.add('TEXT_CONTENT')
+      if (figmaType === 'COLOR') mapped.add('TEXT_FILL')
+      continue
+    }
+    
+    if (scope === 'FILL') {
+      mapped.add('FRAME_FILL')
+      mapped.add('SHAPE_FILL')
+      if (figmaType === 'COLOR') mapped.add('TEXT_FILL')
+      continue
+    }
+    
+    if (scope === 'STROKE') {
+      if (figmaType === 'COLOR') mapped.add('STROKE_COLOR')
+      if (figmaType === 'FLOAT') mapped.add('STROKE_FLOAT')
+      continue
+    }
+    
+    if (scope === 'RADIUS' || scope === 'CORNER_RADIUS') {
+      mapped.add('CORNER_RADIUS')
+      continue
+    }
+
+    if (scope === 'GAP') {
+      mapped.add('GAP')
+      continue
+    }
+
+    if (scope === 'OPACITY') {
+      mapped.add('OPACITY')
+      continue
+    }
+
+    if (scope === 'EFFECT') {
+      if (figmaType === 'COLOR') mapped.add('EFFECT_COLOR')
+      if (figmaType === 'FLOAT') mapped.add('EFFECT_FLOAT')
+      continue
+    }
+    
+    if (scope === 'WIDTH' || scope === 'HEIGHT' || scope === 'SIZE') {
+      mapped.add('WIDTH_HEIGHT')
+      continue
+    }
+
+    // If it's already a valid enum (the error message provided the full list)
+    const validEnums = [
+      'TEXT_CONTENT', 'CORNER_RADIUS', 'WIDTH_HEIGHT', 'GAP', 'ALL_FILLS', 
+      'FRAME_FILL', 'SHAPE_FILL', 'TEXT_FILL', 'STROKE_FLOAT', 'EFFECT_FLOAT', 
+      'EFFECT_COLOR', 'OPACITY', 'FONT_STYLE', 'FONT_FAMILY', 'FONT_SIZE', 
+      'LINE_HEIGHT', 'LETTER_SPACING', 'PARAGRAPH_SPACING', 'PARAGRAPH_INDENT', 
+      'TRANSFORM', 'STROKE_COLOR', 'FONT_WEIGHT'
+    ]
+    if (validEnums.includes(scope)) {
+      mapped.add(scope)
+    }
+  }
+  
+  return Array.from(mapped)
 }
 
 function toFigmaValue(type, value) {
