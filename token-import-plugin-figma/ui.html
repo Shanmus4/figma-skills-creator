@@ -307,8 +307,12 @@
                     </div>
                 </div>
 
-                <div id="preview-area" style="display:none;">
-                    <button class="primary" onclick="doImport('CREATE')">Commit to Figma</button>
+                <div id="preview-area" style="display:none; flex-direction:column; gap:8px;">
+                    <div id="preview-list" style="margin-top: 8px;"></div>
+                    <div class="btn-row">
+                        <button class="primary" onclick="doImport('CREATE')">Commit</button>
+                        <button class="secondary" onclick="clearFile()">Cancel</button>
+                    </div>
                 </div>
 
                 <div id="results" style="display:none;">
@@ -462,6 +466,7 @@ function showError(msg) {
 
 function doImport(strategy) {
     document.getElementById('conflict-area').style.display = 'none';
+    document.getElementById('preview-area').style.display = 'none';
     document.getElementById('progress').style.display = 'flex';
     document.getElementById('import-bar').style.width = '80%';
     parent.postMessage({ pluginMessage: { type: 'IMPORT', collections: parsedCollections, strategy } }, '*');
@@ -497,7 +502,7 @@ window.onmessage = (e) => {
         const conflicts = analysis.filter(a => a.status === 'CONFLICT');
         const newColls = analysis.filter(a => a.status === 'NEW');
 
-        if (conflicts.length > 0 || newColls.length > 0) {
+        if (conflicts.length > 0) {
             document.getElementById('conflict-area').style.display = 'flex';
             let html = '<div style="margin-top: 8px; display: flex; flex-direction: column; gap: 12px;">';
             
@@ -536,8 +541,26 @@ window.onmessage = (e) => {
 
             html += '</div>';
             document.getElementById('conflict-list').innerHTML = html;
+        } else if (newColls.length > 0) {
+            document.getElementById('preview-area').style.display = 'flex';
+            let html = '<div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">';
+            html += `<div style="background:#fcfcfc; padding:8px; border:1px solid #000; border-radius: 0; margin-bottom: 8px;">
+                        <div style="font-weight:900; font-size:12px; margin-bottom:8px; color: #000; letter-spacing: -0.2px; border-bottom: 1px solid #000; padding-bottom: 4px; text-transform: uppercase;">READY_TO_IMPORT</div>
+                        <div style="font-family: var(--font-mono); font-size: 8px; font-weight: 800; color: #666;">
+                            ${newColls.map(n => n.name).join(', ')}
+                        </div>
+                    </div>`;
+            newColls.forEach(n => {
+                html += `
+                    <div style="border: 1px solid #ddd; padding: 8px; background: #fafafa;">
+                        <div style="font-weight: 800; font-size: 10px; color: #000;">${n.name}</div>
+                        <div style="font-family: var(--font-mono); font-size: 8px; color: #666; margin-top: 2px;">${n.tokenCount} VARIABLES FOUND</div>
+                    </div>`;
+            });
+            html += '</div>';
+            document.getElementById('preview-list').innerHTML = html;
         } else {
-            document.getElementById('preview-area').style.display = 'block';
+            showError("No valid collections found in ZIP");
         }
     } else if (msg.type === 'IMPORT_COMPLETE') {
         const list = document.getElementById('result-list');
