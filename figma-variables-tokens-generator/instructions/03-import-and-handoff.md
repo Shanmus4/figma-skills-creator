@@ -25,11 +25,15 @@ Generate a specific list of collections the user must turn off based on their ex
 
 - **1-Tier:** "Do NOT turn off any scopes. Primitives is your only collection, so it must remain visible in pickers."
 - **2-Tier:** "Turn off scopes for **Primitives**."
-- **3-Tier:** "Turn off scopes for **Primitives**. If you use **Theme** strictly as a parent for Component Colors, turn off its scopes too. (Keep scopes ON for Theme if you apply its tokens directly to Tiers)."
-- **4-Tier:** "Turn off scopes for **Primitives**. If you use **Theme** and **Semantic** strictly as parents for Component Colors, turn off their scopes too. (Keep scopes ON if you apply their tokens directly to Tiers)."
+- **3-Tier:** "Turn off scopes for **Primitives**. If you use **Theme** strictly as a parent for Component Colors, turn off its scopes too. (Keep scopes ON for Theme if you apply its tokens directly to your designs)."
+- **4-Tier:** "Turn off scopes for **Primitives**. If you use **Theme** and **Semantic** strictly as parents for Component Colors, turn off their scopes too. (Keep scopes ON if you apply their tokens directly to your designs)."
 - **Optional Collections (If generated):** "If you generated **Responsive** or **Density**, turn off their scopes, as they only feed into Component Dimensions/Typography and should not be picked directly."
 
-> Note: "Hide from publishing" and "turn off scoping" are two different things. Publishing controls what external library consumers see. Scoping controls what appears in the variable picker when a designer applies a variable to a layer property. Both should be managed. The generated JSON handles Primitives `hiddenFromPublishing: true` already.
+> Note: "Hide from publishing" and "turn off scoping" are two different things. Publishing controls what external library consumers see. Scoping controls what appears in the variable picker when a designer applies a variable to a layer property. Both should be managed. The generated JSON handles `hiddenFromPublishing: true` automatically for:
+> - **Always hidden:** Primitives, Responsive, Density (structural parents in every tier)
+> - **3/4-Tier:** Theme (becomes a parent when Component Colors is the tip)
+> - **4-Tier:** Semantic (becomes a parent when Component Colors is the tip)
+> - **2-Tier:** Theme is NOT hidden — it IS the tip collection
 
 ---
 

@@ -134,6 +134,7 @@ theme/overlay/tooltip       FRAME_FILL+SHAPE_FILL
 **Default mode:** mobile
 **Aliases:** Primitives
 **Scopes:** FONT_SIZE, LINE_HEIGHT, LETTER_SPACING, CORNER_RADIUS, STROKE_FLOAT
+**Publishing:** `hiddenFromPublishing: true` on all tokens — Responsive is a structural parent, never consumed directly
 
 This collection provides breakpoint-aware values for all numerical tokens used by Typography and Component Dimensions. It aliases Primitives but maps values design-appropriately per breakpoint — NOT a blind 1:1 forward.
 
@@ -226,6 +227,7 @@ responsive/borderWidth/lg         4    (all modes)
 **Default mode:** comfortable
 **Aliases:** Primitives/spacing/*
 **Scope:** GAP on ALL tokens
+**Publishing:** `hiddenFromPublishing: true` on all tokens — Density is a structural parent, never consumed directly
 
 Padding tokens cover the 6 directions (x, y, top, bottom, left, right). Each direction contains a full size scale (xs through 4xl). Values scale significantly across density modes. Gap tokens also range from xs through 4xl.
 

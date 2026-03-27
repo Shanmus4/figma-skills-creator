@@ -74,7 +74,7 @@ class DesignTokenGenerator:
         if missing:
             raise KeyError(f"SEMANTIC GAP: Component tokens alias non-existent Semantic paths. Fix before generating: {missing}")
 
-    def create_token(self, name, ns, type, value=None, scope=None, alias_target=None, alias_set=None, vid=None, target_registry=None):
+    def create_token(self, name, ns, type, value=None, scope=None, alias_target=None, alias_set=None, vid=None, target_registry=None, hidden_from_publishing=False):
         path = name.lower()
         vid = vid or self.next_id(ns)
         self.token_registry[path] = vid
@@ -94,6 +94,8 @@ class DesignTokenGenerator:
         }
         if type == "string":
             ext["com.figma.type"] = "string"
+        if hidden_from_publishing:
+            ext["com.figma.hiddenFromPublishing"] = True
         if scope:
             ext["com.figma.scopes"] = scope
             

@@ -183,8 +183,8 @@ The general rule: **only TIP collections should appear in pickers.** Hide interm
 **Key notes:**
 - 1-Tier: Primitives is the only collection. Never turn it off here.
 - 2-Tier: Theme IS the colour tip (no Component Colors). Only hide Primitives (and structural parents).
-- 3/4-Tier: Hiding Theme and Semantic are suggestions only — tell user to verify and keep scoping ON if they apply those tokens directly to Tiers instead of going through Component Colors.
-- "Hide from publishing" (library sharing) is different from picker visibility (scope control per variable). Both should be set correctly — the JSON already handles Primitives `hiddenFromPublishing: true` naturally.
+- 3/4-Tier: Hiding Theme and Semantic are suggestions only — tell user to verify and keep scoping ON if they apply those tokens directly to their designs instead of going through Component Colors.
+- "Hide from publishing" (library sharing) is different from picker visibility (scope control per variable). Both should be set correctly. The JSON sets `hiddenFromPublishing: true` on: **always** Primitives, Responsive, Density; **3/4-Tier** Theme; **4-Tier** Semantic. In 2-Tier, Theme is the tip — do NOT hide it.
 
 ## Collection Names — No Brand Prefix Ever
 
