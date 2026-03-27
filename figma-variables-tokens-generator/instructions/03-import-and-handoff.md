@@ -5,10 +5,11 @@ Read this file ONLY after Generation (Turn C) and Token Count Reporting (Turn D)
 
 ## PHASE 4 — IMPORT INSTRUCTIONS
 
-1. Open Figma → Local Variables panel
-2. Import ZIPs in the **exact order shown in the Architecture Summary you confirmed before generation** — each collection must exist before anything that aliases it (Primitives first, Component Colors last)
-3. For each ZIP: click **+ next to Collections** (top of the Local Variables panel) → name the collection exactly as shown → import the JSON file(s)
-4. After import: verify alias chains resolve correctly by opening a token and checking its chain
+Tell the user:
+> "Use the **Figma Variables Importer plugin** to import your ZIP. The plugin reads the numbered folder structure and imports collections in the correct dependency order automatically."
+
+> [!IMPORTANT]
+> **For the AI:** The ZIP's numbered folder prefixes (e.g. `1. Primitives/`, `2. Theme/`) are critical — the plugin uses them to determine import order. Always generate folders with correct numbering as shown in the ZIP Structure Reference below.
 
 ---
 
