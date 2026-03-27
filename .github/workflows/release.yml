@@ -27,12 +27,11 @@ jobs:
           zip -r ../token-import-plugin-figma.zip . -x "*.DS_Store" "node_modules/*"
           cd ..
 
-      - name: Update Latest Release
+      - name: Update Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Latest Skill Release
-          body: "Automated build of the Figma Variables Tokens Generator Skill."
+          name: Figma Variables Tokens Generator ${{ github.ref_name }}
+          body: "Automated build of the Figma Variables Tokens Generator Skill and Plugin."
           files: |
             figma-variables-tokens-generator.zip
             token-import-plugin-figma.zip
