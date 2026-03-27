@@ -25,10 +25,11 @@ Depending on your environment, there are multiple ways to utilize the Figma Vari
 
 | Environment | Import Instruction |
 |-------------|--------------------|
-| **NPX / CLI Tools** | *(Placeholder: `npx import-figma-vars-skill@latest` - Coming Soon)* |
-| **Claude / Cursor / VS Code** | Copy the contents of the `figma-variables-tokens-generator` folder into your AI workspace context. |
-| **Claude Skill Creator** | Use the AI tool to package the folder into a `.skill` file. |
-| **Manual (One-Click ZIP)** | Go to the **Releases** tab on this GitHub repository and download `figma-variables-tokens-generator.zip`. Unzip it and provide the folders manually to your AI assistant. |
+| **Claude.ai Browser** | Ensure your workspace is connected to a remote repository or upload the unzipped `figma-variables-tokens-generator` folder directly to the project knowledge context. |
+| **Claude Code (CLI)** | Navigate to your project directory and run `npx import-figma-vars-skill@latest` *(Coming Soon)*. |
+| **Cursor IDE** | Add the `figma-variables-tokens-generator` folder to your project context, or drag and drop it into the Cursor chat attachments. |
+| **VS Code (GitHub Copilot)** | Keep the `figma-variables-tokens-generator` folder in your active workspace directory and include it in your prompts using `@workspace`. |
+| **Manual (One-Click ZIP)** | Go to the **Releases** tab on the right side of this GitHub repository page and download `figma-variables-tokens-generator.zip`. Unzip it and provide the folders manually to your AI assistant. |
 
 ---
 
@@ -43,7 +44,7 @@ The **Figma Variables Importer Plugin (v1.1 Stable)** automatically resolves thi
 | Environment | Install Instruction |
 |-------------|--------------------|
 | **Figma Community** | *(Placeholder: Link to published Figma Plugin - Coming Soon)* |
-| **Local Development** | 1. Clone this repository.<br>2. Open Figma desktop app.<br>3. Go to **Plugins -> Manage Plugins -> Development -> Import plugin from manifest**.<br>4. Select the `manifest.json` inside the `token-import-plugin-figma/` folder. |
+| **Local Development** | 1. Go to the **Releases** tab on this GitHub repository and download `token-import-plugin-figma.zip`.<br>2. Unzip it to a folder on your computer.<br>3. Open Figma desktop app.<br>4. Go to **Plugins -> Manage Plugins -> Development -> Import plugin from manifest**.<br>5. Select the `manifest.json` inside the unzipped folder. |
 
 ---
 
@@ -66,10 +67,14 @@ The Skill supports building scalable systems from 1 to 4 Tiers. We utilize "Tier
 |-----------------|------------|----------|
 | **Primitives** | All Tiers | The foundational base (hex codes, actual spacing values). Hidden from publishing. |
 | **Theme** | 2, 3, 4 | Light/Dark mode color definitions across surfaces, borders, and text. |
-| **Responsive** | Optional | Viewport-based value mapping (Mobile, Tablet, Desktop) for sizing. Hidden from publishing. |
-| **Density** | Optional | Spacing mappings (Compact, Comfortable, Spacious). Hidden from publishing. |
+| **Responsive** | Optional | Viewport-based value mapping (Mobile, Tablet, Desktop) for numerical tokens. Hidden from publishing. |
+| **Density** | Optional | Spacing mappings (Compact, Comfortable, Spacious) across 6 padding directions and gap. Hidden from publishing. |
+| **Layout** | Optional | Breakpoint-driven grid parameters (columns, margins, gutters). |
+| **Effects** | Optional | Shadow geometry and blurs for UI components. |
 | **Typography** | All Tiers | Centralized text styling referencing Responsive sizes and Primitives fonts. |
 | **Semantic** | 4 Only | High-level aliases connecting Components to Theme for maximum flexibility. |
+| **Component Colors** | 3, 4 | Exact surface and text colors scoped down to specific component states (e.g., Button Hover). |
+| **Component Dimensions** | 3, 4 | Exact sizing and spacing for components referencing Responsive and Density scales. |
 
 ---
 
