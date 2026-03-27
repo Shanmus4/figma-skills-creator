@@ -228,7 +228,7 @@ Before writing ANY JSON, you must now read:
 - `references/06-generator-utility.md`
 
 ### Generation Thinking Constraint
-Extended thinking during generation turns has previously caused context exhaustion — Claude loops through alias chains and hex calculations in its reasoning, hits the context limit, and crashes before writing a single line of script. To prevent this: keep your internal reasoning to a short bulleted summary (target under 50 words). Do not narrate hex codes, ID calculations, alias chains, or script logic in your thought block. Jump directly to Step 1 — Data Dictionary and start writing. If you notice your reasoning expanding beyond a few bullets, stop immediately and write code.
+Extended thinking during generation turns has previously caused context exhaustion — AI Assistant loops through alias chains and hex calculations in its reasoning, hits the context limit, and crashes before writing a single line of script. To prevent this: keep your internal reasoning to a short bulleted summary (target under 50 words). Do not narrate hex codes, ID calculations, alias chains, or script logic in your thought block. Jump directly to Step 1 — Data Dictionary and start writing. If you notice your reasoning expanding beyond a few bullets, stop immediately and write code.
 
 ### Data Blueprint Workflow (MANDATORY)
 Follow this exact 3-step pattern for every generation turn. Do NOT deviate:

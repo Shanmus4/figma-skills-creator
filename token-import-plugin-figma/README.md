@@ -22,9 +22,9 @@ The plugin now supports advanced Figma metadata:
 - **Code Syntax**: Preserves and applies platform-specific syntax (Web, Android, iOS).
 - **Visibility**: Supports "Hidden from Publishing" settings.
 
-## Claude Skill Support
+## AI Skill Support
 
-This plugin is designed to work seamlessly with the **Figma Variable Creator** Claude skill.
+This plugin is designed to work seamlessly with the **Figma Variable Creator** AI skill.
 1. Use the skill to generate your variables structure.
 2. Ask the skill to "Export as Token Porter ZIP".
 3. Drop the resulting ZIP here.

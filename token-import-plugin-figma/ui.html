@@ -332,10 +332,9 @@
             <!-- EXPORT PANEL -->
             <div id="panel-export" class="panel">
                 <div class="process-list" id="export-list-container">
-                    <div class="process-header">
-                        <div>Local Node</div>
-                        <div>Payload</div>
-                        <div style="text-align:right;">Status</div>
+                    <div class="process-header" style="grid-template-columns: 2fr 1fr;">
+                        <div>Collection</div>
+                        <div style="text-align:right;">No. of variables</div>
                     </div>
                     <div id="export-list"></div>
                 </div>
@@ -584,10 +583,9 @@ window.onmessage = (e) => {
         document.getElementById('results').style.display = 'block';
     } else if (msg.type === 'COLLECTIONS_LIST') {
         document.getElementById('export-list').innerHTML = msg.collections.map(c => `
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; padding:12px 14px; border-bottom:1px solid #000; font-size:11px;">
+            <div style="display:grid; grid-template-columns: 2fr 1fr; padding:12px 14px; border-bottom:1px solid #000; font-size:11px;">
                 <div class="col-name">${c.name}</div>
-                <div class="col-size">${c.tokenCount} VARS</div>
-                <div class="col-status"><span class="status-tag tag-blue">LOCAL</span></div>
+                <div class="col-size" style="text-align:right;">${c.tokenCount} VARS</div>
             </div>
         `).join('');
     } else if (msg.type === 'EXPORT_DATA') {

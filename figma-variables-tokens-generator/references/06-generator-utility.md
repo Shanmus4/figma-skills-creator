@@ -173,7 +173,7 @@ class DesignTokenGenerator:
 ## How to use in Generation Phase:
 
 ### 1. The "Data Map" (The Blueprint)
-Instead of calculating every ID manually, Claude organizes the choices into maps:
+Instead of calculating every ID manually, AI Assistant organizes the choices into maps:
 ```python
 primitives_data = {
     "color/blue/500": "#3B82F6",
@@ -183,7 +183,7 @@ primitives_data = {
 ```
 
 ### 2. The Execution (The Generator)
-Claude then writes a short script that loops through the map and calls `create_token` and `nest_token`. This keeps the "bespoke" part of the script extremely small.
+AI Assistant then writes a short script that loops through the map and calls `create_token` and `nest_token`. This keeps the "bespoke" part of the script extremely small.
 
 ### 3. Infinite Permutations
 - **Modes**: Just call `save_mode` twice with different values for the same paths.
