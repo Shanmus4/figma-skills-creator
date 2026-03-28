@@ -178,6 +178,7 @@ Synthesize all answers into a "Collection Manifest" table.
 Before proceeding, you must now read:
 - `references/05a-collections-core.md`
 - `references/05b-collections-semantic-components.md`
+- **IF user requested custom collections in Q11**: you MUST also read `references/07-custom-collections.md` now.
 
 Show this summary before generating anything:
 
@@ -240,6 +241,7 @@ Before writing ANY JSON, you must now read:
 - `references/03-json-format.md`
 - `references/04-primitives.md`
 - `references/06-generator-utility.md`
+- **IF user requested custom collections in Q11**: you MUST also read `references/07-custom-collections.md` now (if you haven't already).
 
 ### Generation Thinking Constraint
 Extended thinking during generation turns has previously caused context exhaustion — AI Assistant loops through alias chains and hex calculations in its reasoning, hits the context limit, and crashes before writing a single line of script. To prevent this: keep your internal reasoning to a short bulleted summary (target under 50 words). Do not narrate hex codes, ID calculations, alias chains, or script logic in your thought block. Jump directly to Step 1 — Data Dictionary and start writing. If you notice your reasoning expanding beyond a few bullets, stop immediately and write code.

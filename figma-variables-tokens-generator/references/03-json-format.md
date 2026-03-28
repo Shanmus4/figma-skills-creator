@@ -421,7 +421,9 @@ def validate_tokens(files, registries):
     files: { "path/to/file.json": data_dict }
     registries: { "CollectionName": { "token/path": "VariableID" } }
     """
+    # RCA 5 Fix: Support custom collection validation by checking all generated registries
     sets = ["Primitives", "Theme", "Responsive", "Density", "Layout", "Effects", "Typography", "Semantic", "Component Colors", "Component Dimensions"]
+    sets.extend(list(registries.keys()))
     for filename, data in files.items():
         for token in data.values():
             if isinstance(token, dict) and "$extensions" in token:

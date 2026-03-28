@@ -103,6 +103,10 @@ class DesignTokenGenerator:
             target_path = alias_target.lower()
             # CRITICAL ALIAS RULE - Strip collection prefix from path for valid JSON
             known_sets = ["primitives/", "theme/", "responsive/", "density/", "layout/", "effects/", "typography/", "semantic/", "component colors/", "component dimensions/"]
+            # Automatically add the target collection name to handle arbitrary custom collections
+            if alias_set:
+                known_sets.append(f"{alias_set.lower()}/")
+                
             for s in known_sets:
                 if target_path.startswith(s):
                     target_path = target_path.replace(s, "", 1)
