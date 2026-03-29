@@ -21,7 +21,7 @@ figma.ui.onmessage = async (msg) => {
     case 'CHECK_CONFLICTS': await checkConflicts(msg.collections); break
     case 'IMPORT':          await handleImport(msg.collections, msg.strategy, msg.autoScope); break
     case 'EXPORT':          await handleExport(); break
-    case 'GET_COLLECTIONS': sendCollectionsList(); break
+    case 'GET_COLLECTIONS': await sendCollectionsList(); break
   }
 }
 
@@ -29,8 +29,8 @@ figma.ui.onmessage = async (msg) => {
 
 async function checkConflicts(collections) {
   try {
-    const localCollections = figma.variables.getLocalVariableCollections()
-    const localVars = figma.variables.getLocalVariables()
+    const localCollections = await figma.variables.getLocalVariableCollectionsAsync()
+    const localVars = await figma.variables.getLocalVariablesAsync()
     const varNameById = {}
     const varCollById = {}
     
@@ -148,7 +148,7 @@ function isBetterEqual(localValue, incomingToken, type, varNameById, varCollById
 // ─── IMPORT ───────────────────────────────────────────────────────────────────
 
 async function handleImport(collections, strategy = 'CREATE', autoScope = true) {
-  const localCollections = figma.variables.getLocalVariableCollections()
+  const localCollections = await figma.variables.getLocalVariableCollectionsAsync()
   const results      = []  // per-collection summary
   const pendingAliases = [] // resolved after all variables exist
   const variableMap  = {} // 'CollectionName/token/path' → variableId
@@ -159,8 +159,8 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
     const newVariableIds = new Set()
 
     // NEW: Pre-populate variableMap with ALL existing local variables to support cross-collection aliases
-    const allLocalCollections = figma.variables.getLocalVariableCollections()
-    const allLocalVars = figma.variables.getLocalVariables()
+    const allLocalCollections = await figma.variables.getLocalVariableCollectionsAsync()
+    const allLocalVars = await figma.variables.getLocalVariablesAsync()
     allLocalVars.forEach(v => {
       const coll = allLocalCollections.find(c => c.id === v.variableCollectionId)
       if (coll) {
@@ -238,7 +238,7 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
           zipPaths.add(p.split('/').map(seg => seg.trim()).filter(Boolean).join('/'))
         }))
 
-        const collectionVars = figma.variables.getLocalVariables().filter(v => v.variableCollectionId === collection.id)
+        const collectionVars = (await figma.variables.getLocalVariablesAsync()).filter(v => v.variableCollectionId === collection.id)
         collectionVars.forEach(v => {
           const normName = v.name.split('/').map(seg => seg.trim()).filter(Boolean).join('/')
           if (!zipPaths.has(normName)) {
@@ -267,7 +267,7 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
               variableMap[varKey] = variable.id
               newVariableIds.add(variable.id)
             } else {
-              variable = figma.variables.getVariableById(variableMap[varKey])
+              variable = await figma.variables.getVariableByIdAsync(variableMap[varKey])
             }
 
             if (!variable) continue
@@ -287,8 +287,9 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
             if (token.codeSyntax) {
               for (const [platform, value] of Object.entries(token.codeSyntax)) {
                 const p = platform.toUpperCase()
-                if (['WEB', 'ANDROID', 'IOS'].includes(p)) {
-                  variable.setVariableCodeSyntax(p, value)
+                const figmaPlatform = { 'WEB': 'WEB', 'ANDROID': 'ANDROID', 'IOS': 'iOS' }[p]
+                if (figmaPlatform) {
+                  variable.setVariableCodeSyntax(figmaPlatform, value)
                 }
               }
             }
@@ -317,7 +318,7 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
     // ── Resolve Aliases ──
     const aliasErrors = []
     for (const { varId, modeId, targetName, targetSet, collName, path } of pendingAliases) {
-      const variable = figma.variables.getVariableById(varId)
+      const variable = await figma.variables.getVariableByIdAsync(varId)
       if (!variable) continue
 
       const targetKey = `${targetSet}/${targetName}`
@@ -342,7 +343,7 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
       }
 
       try {
-        const targetVar = figma.variables.getVariableById(targetId)
+        const targetVar = await figma.variables.getVariableByIdAsync(targetId)
         variable.setValueForMode(modeId, figma.variables.createVariableAlias(targetVar))
       } catch (e) {
         collectionStats[collName].failures.add(path)
@@ -389,7 +390,7 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
 
 async function handleExport() {
   try {
-    const local = figma.variables.getLocalVariableCollections()
+    const local = await figma.variables.getLocalVariableCollectionsAsync()
 
     // Sort by standard collection order
     const sorted = [...local].sort((a, b) => {
@@ -406,7 +407,7 @@ async function handleExport() {
     const varCollById = {}
     for (const coll of sorted) {
       for (const vid of coll.variableIds) {
-        const v = figma.variables.getVariableById(vid)
+        const v = await figma.variables.getVariableByIdAsync(vid)
         if (v) { varNameById[vid] = v.name; varCollById[vid] = coll.name }
       }
     }
@@ -425,7 +426,7 @@ async function handleExport() {
         const tree = {}
 
         for (const vid of coll.variableIds) {
-          const variable = figma.variables.getVariableById(vid)
+          const variable = await figma.variables.getVariableByIdAsync(vid)
           if (!variable) continue
 
           const value = variable.valuesByMode[mode.modeId]
@@ -452,8 +453,8 @@ async function handleExport() {
 
 // ─── GET COLLECTIONS LIST (for Export tab preview) ─────────────────────────
 
-function sendCollectionsList() {
-  const cols = figma.variables.getLocalVariableCollections()
+async function sendCollectionsList() {
+  const cols = await figma.variables.getLocalVariableCollectionsAsync()
   figma.ui.postMessage({
     type: 'COLLECTIONS_LIST',
     collections: cols.map(c => ({
