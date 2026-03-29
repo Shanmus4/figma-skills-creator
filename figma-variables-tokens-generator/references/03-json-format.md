@@ -273,6 +273,18 @@ Follow these full structural patterns. Each Tier aliases its **direct parent**.
 
 **Every non-primitive token must have aliasData.** No exceptions. Dark mode tokens, Typography tokens, Component Colors, Effects numeric tokens — all must have aliasData.
 
+## Naming Collision Rule (The Folder Fallback)
+
+In Figma, a path cannot be both a **Variable** and a **Group (Folder)**.
+
+> [!CAUTION]
+> **NO VARIABLE/GROUP OVERLAP**: A JSON key cannot contain a `$value` AND child keys.
+> - ✗ **BROKEN**: `"destructive": { "$value": { ... }, "text": { ... } }` — Here, `destructive` is a variable, so it cannot be a folder for `text`.
+> - ✓ **CORRECT**: `"destructive": { "default": { "$value": { ... } }, "text": { ... } }` — Here, `destructive` is purely a folder.
+>
+> If a semantic or component group has multiple sub-states (like `brand-primary`, `brand-secondary`), you must never put a base value on the parent `brand` key if other `brand/*` tokens exist. Use a internal `default` or `surface` key for the base value.
+
+
 ## Color Token Value (always an object — never a hex string)
 ```json
 "$value": {
@@ -421,33 +433,35 @@ def validate_tokens(files, registries):
     files: { "path/to/file.json": data_dict }
     registries: { "CollectionName": { "token/path": "VariableID" } }
     """
-    # RCA 5 Fix: Support custom collection validation by checking all generated registries
     sets = ["Primitives", "Theme", "Responsive", "Density", "Layout", "Effects", "Typography", "Semantic", "Component Colors", "Component Dimensions"]
     sets.extend(list(registries.keys()))
     for filename, data in files.items():
         for token in data.values():
             if isinstance(token, dict) and "$extensions" in token:
                 ext = token["$extensions"]
+                vid = ext.get("com.figma.variableId", "")
+                is_custom = vid.startswith("VariableID:9") # ns 90-99
+                
+                # Custom Collection Alias Check:
+                # Color tokens in ns 90+ MUST have aliasData (no hardcoded hex allowed)
+                if is_custom and token.get("$type") == "color" and "com.figma.aliasData" not in ext:
+                     raise ValueError(f"CONSISTENCY ERROR: Custom color token '{vid}' is hardcoded. It MUST alias a Primitive.")
+
                 if "com.figma.aliasData" in ext:
                     alias = ext["com.figma.aliasData"]
                     target_set = alias["targetVariableSetName"]
                     target_name = alias["targetVariableName"]
                     
-                    # RCA 5 Fix: Catch broken alias lookups
                     if alias["targetVariableId"] == "VariableID:0:0":
                          raise ValueError(f"CRITICAL: Broken alias 'VariableID:0:0' detected for '{target_name}'.")
 
-                    # RCA 5 Fix: Per-Collection Target Verification
-                    if target_set in registries:
-                        if target_name not in registries[target_set]:
-                            raise ValueError(f"CROSS-TIER GAP: Token aliases '{target_name}' in '{target_set}', but that path does not exist in the target collection.")
+                    if target_set in registries and target_name not in registries[target_set]:
+                        raise ValueError(f"CROSS-TIER GAP: Token aliases '{target_name}' in '{target_set}', but that path does not exist in the target collection.")
 
-                    # Bug 1 Fix: Verify no prefix contamination
                     for s in sets:
                         if target_name.startswith(s.lower() + "/"):
                             raise ValueError(f"CRITICAL: Token path '{target_name}' contains illegal collection prefix '{s}/'")
                 
-                # Bug 2 Fix: Verify syntax purity
                 syntax = ext.get("com.figma.codeSyntax", {}).get("WEB", "")
                 if "  " in syntax:
                     raise ValueError(f"CRITICAL: Double-space detected in codeSyntax: {syntax}")

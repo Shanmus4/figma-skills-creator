@@ -164,8 +164,17 @@ class DesignTokenGenerator:
         parts = path.split('/')
         curr = tree
         for part in parts[:-1]:
+            # Guard: If current node is already a token, it cannot be a branch/folder
+            if part in curr and isinstance(curr[part], dict) and "$value" in curr[part]:
+                raise ValueError(f"NAMING COLLISION: '{part}' in path '{path}' is already a token and cannot be used as a folder.")
+            
             if part not in curr: curr[part] = {}
             curr = curr[part]
+        
+        # Guard: If a folder already exists here, we cannot overwrite it with a token ($value)
+        if parts[-1] in curr and isinstance(curr[parts[-1]], dict) and "$value" not in curr[parts[-1]]:
+             raise ValueError(f"NAMING COLLISION: '{parts[-1]}' in path '{path}' is already a folder and cannot be overwritten by a token value.")
+
         curr[parts[-1]] = token
 
     def save_mode(self, collection_name, mode_name, tree):
