@@ -1,7 +1,7 @@
 # Primitives Reference
 
 ## Rules (non-negotiable)
-1. Hardcoded values ONLY — no aliases, no scope key (absent entirely, not empty array)
+1. Hardcoded values ONLY — no aliases. Apply correct scopes via `get_scope(is_primitive=True)` from `02-scoping-rules.md`.
 2. `hiddenFromPublishing: true` on every token
 3. `codeSyntax.WEB` on every token
 4. Color values are objects (colorSpace/components/alpha/hex) — never hex strings
@@ -165,7 +165,7 @@ shadow/md/x=0,  shadow/md/y=4,  shadow/md/blur=16, shadow/md/spread=0
 shadow/lg/x=0,  shadow/lg/y=8,  shadow/lg/blur=24, shadow/lg/spread=0
 shadow/xl/x=0,  shadow/xl/y=16, shadow/xl/blur=48, shadow/xl/spread=0
 ```
-These are number tokens, no scope key, hiddenFromPublishing.
+These are number tokens with correct scopes (EFFECT_FLOAT), hiddenFromPublishing.
 
 ---
 

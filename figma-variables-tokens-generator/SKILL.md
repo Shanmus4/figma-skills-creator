@@ -2,8 +2,9 @@
 name: figma-variables-tokens-generator
 description: >
   Generate a fully connected design token system instantly from a chat prompt.
-  Supports everything from a simple 1-tier flat architecture all the way up to an 
-  enterprise 4-tier setup (Primitives, Theme, Semantic, and Optional collections). The AI will 
+  Supports everything from a simple 1-tier flat architecture, to 2/3-tier systems 
+  (Primitives, Semantic with light/dark modes, Component Colors), all the way up to an 
+  enterprise 4-tier setup (Primitives, Theme, Semantic, Component Colors + optional collections). The AI will use a 
   dedicated plugin ([Variables Tokens Collections Importer](https://www.figma.com/community/plugin/1619733963699677957)) to instantly 
   get all your variables cleanly generated. View the full documentation and 
   repository to learn more: https://github.com/Shanmus4/figma-variables-tokens-generator. 

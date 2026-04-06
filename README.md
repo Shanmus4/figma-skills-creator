@@ -9,6 +9,41 @@ Welcome to the **Figma Variables Generator Ecosystem**. This project consists of
 
 ---
 
+### Ecosystem Workflow
+
+```mermaid
+flowchart TD
+    classDef user fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#ffffff;
+    classDef ai fill:#10b981,stroke:#059669,stroke-width:2px,color:#ffffff;
+    classDef script fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff;
+    classDef file fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#ffffff;
+    classDef plugin fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#ffffff;
+    classDef figma fill:#000000,stroke:#333333,stroke-width:2px,color:#ffffff;
+
+    U[👤 User] -->|1. Answers Questionnaire| S[🤖 AI Assistant]
+    S -->|2. Analyzes Architecture Rules| S
+    S -->|3. Writes Python Data Map| G[🐍 Generator Script]
+    C[Generator Core] -->|Helper Functions| G
+    
+    G -->|4. Generates JSON per Collection| Z[📦 tokens.zip]
+    
+    Z -.->|5. Drag & Drop| P[🧩 Figma Importer Plugin]
+
+    P -->|6. Ingests by Numbered Order| F[🎨 Figma Variables Panel]
+    
+    F -->|7. Evaluates 'hiddenFromPublishing'| L{Is Collection Hidden?}
+    L -->|Yes| N[Strips Scoping & Hides from Picker]
+    L -->|No| Y[Applies Strict Variable Scopes]
+
+    class U user;
+    class S ai;
+    class G,C script;
+    class Z file;
+    class P plugin;
+    class F,L,N,Y figma;
+```
+
+---
 ## 1. The AI Skill: How it Works
 
 The AI Skill acts as an expert token architect (understanding both product design and frontend engineering). 
@@ -75,22 +110,22 @@ The Skill supports building scalable systems from 1 to 4 Tiers. We utilize "Tier
 | Architecture | Best For | Description |
 |--------------|----------|-------------|
 | **1-Tier (Flat)** | Small prototypes | Raw values only (e.g. \`blue-500\`). Not scalable. |
-| **2-Tier (Semantic)** | Simple apps | `Semantic` → `Primitives` (e.g., \`text/primary\` → \`blue-900\`). |
-| **3-Tier (Theme)** | Complex apps | `Component` → `Theme` → `Primitives` (e.g., \`button/bg\` → \`interactive/primary\` → \`blue-500\`). |
-| **4-Tier (Enterprise)** | Multi-brand/White-label | `Component` → `Semantic` → `Theme` → `Primitives` (e.g., \`button/bg\` → \`action/primary\` → \`brand/primary\` → \`blue-500\`). |
+| **2-Tier (Semantic)** | Standard apps | `Semantic` (light/dark modes) → `Primitives`. |
+| **3-Tier (Component)** | Production apps | `Component` → `Semantic` (light/dark modes) → `Primitives`. |
+| **4-Tier (Enterprise)** | Multi-brand/White-label | `Component` → `Semantic` (no modes) → `Theme` (palette-switching) → `Primitives`. |
 
 ### Core Collections Matrix
 
 | Collection Name | Tier Level | Function |
 |-----------------|------------|----------|
 | **Primitives** | All Tiers | The foundational base (hex codes, actual spacing values). Hidden from publishing. |
-| **Theme** | 2, 3, 4 | Light/Dark mode color definitions across surfaces, borders, and text. |
+| **Theme** | 4 Only | A palette-switching mode layer (Light/Dark) strictly for enterprise multi-brand systems. Hidden from publishing. |
 | **Responsive** | Optional | Viewport-based value mapping (Mobile, Tablet, Desktop) for numerical tokens. Hidden from publishing. |
 | **Density** | Optional | Spacing mappings (Compact, Comfortable, Spacious) across 6 padding directions and gap. Hidden from publishing. |
 | **Layout** | Optional | Breakpoint-driven grid parameters (columns, margins, gutters). |
 | **Effects** | Optional | Shadow geometry and blurs for UI components. |
 | **Typography** | All Tiers | Centralized text styling referencing Responsive sizes and Primitives fonts. |
-| **Semantic** | 4 Only | High-level aliases connecting Components to Theme for maximum flexibility. |
+| **Semantic** | 2, 3, 4 | The core mode-switching layer (Light/Dark) for 2/3-Tier, or a mode-less semantic intent layer in 4-Tier systems. |
 | **Component Colors** | 3, 4 | Exact surface and text colors scoped down to specific component states (e.g., Button Hover). |
 | **Component Dimensions** | 3, 4 | Exact sizing and spacing for components referencing Responsive and Density scales. |
 

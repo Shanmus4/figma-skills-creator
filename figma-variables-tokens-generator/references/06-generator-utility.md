@@ -62,8 +62,9 @@ class DesignTokenGenerator:
 
     def validate_semantic_coverage(self, cc_map, sem_registry):
         """
-        Pre-flight audit for Component Colors -> Semantic coverage (4-Tier only).
-        Run BEFORE building Component Colors.
+        Pre-flight audit for Component Colors -> Semantic coverage.
+        Run BEFORE building Component Colors in ALL tiers (3-Tier and 4-Tier).
+        Component Colors MUST alias Semantic — never Theme, never Primitives.
         """
         missing = []
         for cc_path, target_sem_path in cc_map.items():
@@ -115,13 +116,14 @@ class DesignTokenGenerator:
             registry = target_registry if target_registry is not None else self.token_registry
             target_vid = registry.get(target_path)
             
-            # Bug 3 & 7 Fix: Automated Backfilling Guard
-            if not target_vid and alias_set == "Primitives":
-                raise KeyError(f"MISSING PRIMITIVE: Target '{target_path}' not found in Primitives registry. You MUST add this primitive before aliasing it.")
-            elif not target_vid and target_registry is not None:
+            # Automated Guard: If an alias target is declared, it MUST exist in the master registry.
+            if not target_vid:
                 raise KeyError(
-                    f"CROSS-TIER GAP: Target '{target_path}' not found "
-                    f"in {alias_set} registry. This will break the import.")
+                    f"CRITICAL ALIAS GAP: The target path '{target_path}' does NOT exist "
+                    f"in the generator's memory. You cannot alias a token that hasn't been created yet. "
+                    f"If this is a custom collection string/value, backfill it to Primitives in Turn A. "
+                    f"If this is a Component Color, make sure the Semantic token was actually generated."
+                )
 
             ext["com.figma.aliasData"] = {
                 "targetVariableId": target_vid or "VariableID:0:0",
@@ -194,8 +196,8 @@ class DesignTokenGenerator:
 
 ## How to use in Generation Phase:
 
-### 1. The "Data Map" (The Blueprint)
-Instead of calculating every ID manually, AI Assistant organizes the choices into maps:
+### 1. The "Data Map" (IN SCRIPT ONLY)
+Instead of calculating every ID manually, organize the choices into maps **inside your Python script**. NEVER build data maps in plain conversation text.
 ```python
 primitives_data = {
     "color/blue/500": "#3B82F6",
@@ -212,7 +214,44 @@ AI Assistant then writes a short script that loops through the map and calls `cr
 - **Tiers**: Just change the `alias_set` argument.
 - **Special Tokens**: Just add a new key to the data map. Logic remains the same.
 
-### 4. Colour Family Helper — Canonical Pattern (CRITICAL)
+### 4. The Universal Cross-Collection Alias Law (CRITICAL)
+
+**Bug Fix: Unresolved Alias Error (VariableID:0:0)**
+To guarantee a 100% "SYNCED" import in Figma, you must deeply understand how scopes and keys change between tiers, and NEVER blindly mirror a layer's key into its parent if the parent uses a different structure.
+
+**The Law:**
+1. **Numeric Scales use RAW NUMBERS in Primitives:** Any size/scale-based primitive (borderwidth, radius, spacing/gap, opacity, blur, sizing) must be created using the literal physical value as the key (e.g., `borderwidth/1`, `opacity/10`, `spacing/16`). *Note: Primitives hold colors, strings, and booleans too, but for sizes/scales, never use T-shirt names.*
+2. **Intermediate Layers use SEMANTIC SIZING (T-Shirt/Intent):** Structural layers (Responsive, Density, Effects, Semantic) use semantic or T-Shirt sizing (e.g., `sm, md, lg`, `compact`, `subtle`).
+3. **The Alias Mapping:** When creating an intermediate token, **its target path MUST resolve exactly to the physical primitive's key**. 
+
+```python
+# THE PRIMITIVES MAP (Strictly Numbers)
+primitives_data = {
+    "borderwidth/1": 1,
+    "borderwidth/2": 2,
+    "radius/8": 8,
+    "spacing/16": 16,
+    "opacity/50": 0.5
+}
+```
+
+```python
+# THE STRUCTURAL MAP (T-Shirt -> Numeric Alias)
+responsive_data = {
+    # CORRECT: The T-shirt key points to the physical number
+    "borderwidth/sm": "borderwidth/1",   
+    "radius/md": "radius/8",
+    "opacity/subtle": "opacity/50"
+    
+    # WARNING: Do NOT do "borderwidth/sm": "borderwidth/sm" unless the user 
+    # explicitly commanded you to use T-shirt sizing in Primitives! 
+    # Since Primitives default to numbers, blindly mirroring the key will crash the script.
+}
+```
+
+This universal logic applies to **EVERY** property you generate. You must be implicitly smart about verifying that your alias target actually exists in the collection you are pointing to.
+
+### 5. Colour Family Helper — Canonical Pattern (CRITICAL)
 
 **RULE: Backfill Timing (CRITICAL)**
 You MUST perform all `create_token` calls for Primitives (including backfilled values) **BEFORE** calling `save_mode("Primitives", ...)`. Any primitive added after the Primitives collection is saved will exist in the registry but will NOT be written to the output file, causing broken aliases in Responsive.
@@ -228,11 +267,18 @@ ORANGERED_SHADES = [
 ]
 ORANGERED_ALPHA_BASE = "#D93900"  # hex of the 500 shade for alpha variants
 
-def make_family(gen, tree, family, shades, alpha_hex):
-    """shades: list of (key, hex_str). alpha_hex: base hex for alpha variants."""
+def make_family(gen, tree, family, shades, alpha_hex,
+                scope=None, hidden_from_publishing=False):
+    """
+    shades: list of (key, hex_str). alpha_hex: base hex for alpha variants.
+    scope: list of Figma scopes (e.g. ["ALL_FILLS"] for Primitives).
+    hidden_from_publishing: bool for parent collections.
+    """
     for key, h in shades:
         r = int(h[1:3],16)/255; g = int(h[3:5],16)/255; b = int(h[5:7],16)/255
-        token = gen.create_token(f"color/{family}/{key}", 10, "color", value={"colorSpace": "srgb", "components": [r, g, b], "alpha": 1, "hex": h})
+        token = gen.create_token(f"color/{family}/{key}", 10, "color",
+            value={"colorSpace": "srgb", "components": [r, g, b], "alpha": 1, "hex": h},
+            scope=scope, hidden_from_publishing=hidden_from_publishing)
         gen.nest_token(tree, f"color/{family}/{key}", token)
         
     ar = int(alpha_hex[1:3],16)/255
@@ -241,7 +287,9 @@ def make_family(gen, tree, family, shades, alpha_hex):
     for a_val, a_key in [(0.08,"a8"),(0.16,"a16"),(0.24,"a24"),(0.32,"a32"),
                          (0.40,"a40"),(0.48,"a48"),(0.56,"a56"),(0.64,"a64"),(1.0,"a100")]:
         path = f"color/{family}/{a_key}"
-        token = gen.create_token(path, 10, "color", value={"colorSpace": "srgb", "components": [ar, ag, ab], "alpha": a_val, "hex": alpha_hex})
+        token = gen.create_token(path, 10, "color",
+            value={"colorSpace": "srgb", "components": [ar, ag, ab], "alpha": a_val, "hex": alpha_hex},
+            scope=scope, hidden_from_publishing=hidden_from_publishing)
         gen.nest_token(tree, path, token)
 ```
 
@@ -307,7 +355,8 @@ for path in theme_paths:
 ```
 
 **Collections that REQUIRE prebuild:**
-- Theme (light + dark)
+- Semantic (light + dark — in 2/3-Tier)
+- Theme (light + dark — in 4-Tier only)
 - Responsive (mobile + tablet + desktop)  
 - Density (compact + comfortable + spacious)
 - Layout (xs + sm + md + lg + xl + xxl)

@@ -9,6 +9,7 @@
 > - **Architectural Dependencies:** Some questions depend on previous choices. (e.g., If the user chose a **2-Tier architecture** in Q7, do **NOT** offer `Component-first` naming in Q18, as 2-Tier systems do not have a dedicated component Tier).
 > - Apply this intelligence to Product Type (Q2), Colours (Q3–Q6), Tier Architecture (Q7), Code Syntax (Q17), and Variable path structure (Q18). Adapt the dropdown OPTIONS based on what you learned — but still present the dropdown and wait for the user's selection.
 - **Platform Mapping (Q2 Logic)**: Map the selection to `platforms` list: `Web` or `Desktop` -> `["WEB"]`; `Mobile` -> `["ANDROID", "iOS"]`; `Web + Mobile` -> `["WEB", "ANDROID", "iOS"]`.
+- **Existing System Import (Q1 Context)**: If the user mentions they already have Figma variables during Q1 (brand/context), instruct them: *"Export your existing variables using the Variables Tokens Collections Importer plugin (Export tab). Upload the ZIP or provide the file path so I can analyze your current system and pre-fill the questionnaire."* Analyze the exported JSON for: token paths, naming conventions, tier structure, mode names, color palette. Pre-fill subsequent answers based on analysis.
 
 
 ### TURN 4 — Product Type + Colours (dropdowns)
@@ -57,11 +58,17 @@ After the brand and context are resolved, show these four dropdowns together:
 
 **Q7** *(ask_user_input — single_select)*: "Token Tier architecture? [Rec: [Value]]"
 - `1-Tier — Primitives + Typography (e.g. Prototypes or minimal systems)`
-- `2-Tier — Primitives + Theme + Typography (e.g. Standard scale for most apps)`
-- `3-Tier — Primitives + Theme + Component Colors + Typography (e.g. Design-to-Dev parity with component variables)`
-- `4-Tier — Primitives + Theme + Semantic + Component Colors + Typography (e.g. Enterprise systems with full semantic aliasing)`
+- `2-Tier — Primitives + Semantic (light/dark modes) + Typography (e.g. Standard apps like Material Design)`
+- `3-Tier — Primitives + Semantic (light/dark modes) + Component Colors + Typography (e.g. Production systems with component variables)`
+- `4-Tier — Primitives + Theme + Semantic + Component Colors + Typography (e.g. Enterprise / multi-brand with separate palette switching)`
 
 > ARCHITECTURE NOTE: Component Colors AND Component Dimensions are automatically included in 3-Tier and 4-Tier. Do NOT ask the user again if they want these collections when they have already chosen 3 or 4 Tier.
+> THEME CLARIFICATION: If a user says "I want a Theme collection" but chose 2-Tier or 3-Tier, explain: *"In industry-standard practice (Material Design, etc.), the mode-switching layer is called Semantic in 2/3-Tier systems. Theme only exists as a separate collection in 4-Tier for multi-brand enterprise systems. Do you want light/dark modes on Semantic (2/3-Tier) or a separate palette-switching layer (4-Tier)?"*
+
+**Q7b** *(ask_user_input — single_select)*: "How comprehensive should your token system be? [Rec: [Value]]"
+- `Lean — minimal, quick setup (e.g. 55-80 Semantic tokens, basic components)`
+- `Standard — production-ready (e.g. 80-120 Semantic tokens, full component coverage) [Recommended for most apps]`
+- `Enterprise — exhaustive coverage (e.g. 120-250+ Semantic tokens, data viz, status colors, every state)`
 
 ---
 
@@ -243,19 +250,23 @@ Before writing ANY JSON, you must now read:
 - `references/06-generator-utility.md`
 - **IF user requested custom collections in Q11**: you MUST also read `references/07-custom-collections.md` now (if you haven't already).
 
-### Generation Thinking Constraint
-Extended thinking during generation turns has previously caused context exhaustion — AI Assistant loops through alias chains and hex calculations in its reasoning, hits the context limit, and crashes before writing a single line of script. To prevent this: keep your internal reasoning to a short bulleted summary (target under 50 words). Do not narrate hex codes, ID calculations, alias chains, or script logic in your thought block. Jump directly to Step 1 — Data Dictionary and start writing. If you notice your reasoning expanding beyond a few bullets, stop immediately and write code.
+### 🧠 STRUCTURED THINKING CONSTRAINT (CRITICAL)
+LLMs need to execute "Chain of Thought" reasoning to accurately build dynamic logic, but extended planning (like enumerating tokens or calculating hexes) causes context exhaustion and crashes. 
+
+**TO BALANCE THIS:** You must split your reasoning:
+1. **High-Level Strategy (Allowed in Chat):** You may safely write a brief (<100 word) bulleted summary mapping out the high-level architecture decisions based on the questionnaire (e.g., "Architecture: 4-Tier, Primary: Green, Density: Enterprise").
+2. **Data Enumeration (FORBIDDEN in Chat):** You are strictly **FORBIDDEN** from enumerating individual tokens, defining color hexes, mapping out alias chains, or writing data blueprints in your conversational text. 
+
+**Python is your scratchpad.** Do the actual 1:1 token mapping and hex value assignments ONLY inside the Python script's data dictionaries!
 
 ### Data Blueprint Workflow (MANDATORY)
-Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
-1. **Step 1 — Data Dictionary**: Summarize the interview answers into a compact `brand_data` Python dictionary (hex codes, mode names, font choices, Tier count). This is the ONLY planning you do.
-2. **Step 2 — Script**: 
-    - **A. Shared Utility**: Write the code from `references/06-generator-utility.md` into a file named `generator_utils.py`.
-    - **B. Generation Script**: Write your generation script (Turn A, B, or C). Import the generator using `from generator_utils import DesignTokenGenerator`. 
-    - **C. Platform Initialization**: Initialize with `DesignTokenGenerator(brand_name, syntax_format, platforms)`. Ensure the `platforms` list matches the mappings from Q2.
-    - **D. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary. In the next turn, load the dict and reconstruct with `gen = DesignTokenGenerator.from_dict(pickle.load(f))`. This removes all module-path dependencies and ensures the state is always loadable regardless of the script's `__main__` context.
-    - **D. Loop**: Loop through your `brand_data` calling `create_token` and `nest_token`. Use the self-correcting prefix stripping and backfilling guards built into the utility.
-3. **Step 3 — Output**: Execute and output the ZIP.
+Follow this exact pattern for every generation turn. Do NOT deviate:
+1. **Brief Strategy:** 2-3 bullets acknowledging the high-level architecture context.
+2. **Execute — The Script**: 
+    - **A. Shared Utility**: Inside the script, write the code from `references/06-generator-utility.md` into `generator_utils.py` (or embed it).
+    - **B. Data Maps**: Inside the script, define your hex codes and paths in standard Python dicts/lists.
+    - **C. Loop**: Loop through your data calling `create_token` and `nest_token`. Use the self-correcting prefix stripping and backfilling guards built into the utility.
+    - **D. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary.
     - **Zero narration during generation**: Do not explain the output or summarize what was generated. Deliver the ZIP widget, then proceed to Turn D (token count table). The follow-up conversation in Phase 6 of the handoff file happens after this.
 
 > **Performance & Stability Guardrails** — Serialization errors and script timeouts silently break the output ZIP. Follow these to prevent them:
@@ -273,16 +284,21 @@ Follow this exact 3-step pattern for every generation turn. Do NOT deviate:
 >     - Before Turn B: Run `validate_responsive_coverage`.
 >     - Before Turn C: Run `validate_semantic_coverage`.
 > 4. **Mandatory Pre-CC Semantic Audit**: Before writing Component Colors, build a flat `cc_to_sem` intent map and call `validate_semantic_coverage()` against it. If any gap is found (e.g. `border/subtle` missing from Semantic), add it to Semantic first. Never allow a "VariableID:0:0" to be written to Component Colors.
-> 5. **Icon Mapping**: The `color/icon/*` group in Component Colors should alias `Theme` for general UI roles (default, muted, brand, error, etc.), unless a specific 4-Tier semantic icon Tier was requested.
+> 5. **Icon Mapping**: The `color/icon/*` group in Component Colors should alias `Semantic` for general UI roles (default, muted, brand, error, etc.). Component Colors ALWAYS aliases Semantic — never Theme, never Primitives.
 > 6. **Mandatory $value (Real Value Rule)**: `$value` on alias tokens is a placeholder but must be structural. Use the **Actual Resolved Value** for numbers and strings (safety fallback). Use a **Black Object** for colors. String tokens REQUIRE `"com.figma.type": "string"` at all Tiers, and **Primitive Strings DO have scopes**. NO curly braces. See `references/03-json-format.md`.
 > 7. **Typography Completeness Check**: Before writing Typography, explicitly list every role × every property (fontSize, lineHeight, letterSpacing, fontFamily, fontWeight) as a checklist. Verify all 5 are present for every role. A missing property = a dropped token in Figma.
 > 8. **Semantic Path Verification**: When referencing Semantic in `Component Colors`, verify that the specific path (e.g. `surface/raised`) was actually generated in the Semantic collection. It is not enough to check if the collection exists; you must check the path completeness.
 > 9. **Path Normalization**: Always use `.lower()` when constructing path strings in your Python logic (e.g. `path = f"font/lineheight/{role}".lower()`). Special care for `lineheight`, `letterspacing`, `fontweight` — these must NOT be camelCase in any script lookup, prebuild, or registry call. Normalization must happen at **construction**, not just at lookup.
 > 10. **Naming Collision Check (Mandatory)**: Before building any collection, verify no path is both a token ($value) and a group (children). If `action/destructive` has a value, it cannot have children like `action/destructive/text`. **Fix**: Move the base value to `action/destructive/default`.
-> 11. **Contextual Hiding Logic (Intelligence Rule)**: Decide whether to set `hidden_from_publishing=True` based on the Architecture (Q7).
->     - **Rule**: If Architecture == 1-Tier, everything is **Visible**. If Architecture > 1-Tier, parent collections (Primitives, Theme etc.) MUST be **Hidden**.
+> 11. **Contextual Hiding Logic (Intelligence Rule)**: Set `hidden_from_publishing=True` based on the Architecture (Q7) and the per-tier table in `01-architecture.md`:
+>     - **1-Tier**: Everything is **Visible** (Primitives are the picking layer).
+>     - **2-Tier**: Primitives = **Hidden**. Semantic, Responsive, Density, Typography, Effects, Layout = **Visible** (No components exist, so users pick from these layers).
+>     - **3-Tier**: Primitives, Semantic, Responsive, Density = **Hidden**. Component Colors, Component Dimensions, Typography, Effects, Layout = **Visible**.
+>     - **4-Tier**: Primitives, Theme, Semantic, Responsive, Density = **Hidden**. Component Colors, Component Dimensions, Typography, Effects, Layout = **Visible**.
 > 12. **Custom Collection Alias Rule**: Color tokens in Custom Collections (ns 90+) are NOT allowed to have hardcoded hex values. They MUST alias Primitives. If the hex is new, backfill it into Primitives first.
 > 13. **Pre-Generation Coverage Audit — All Collections**: Before building any collection, run `validate_responsive_coverage` from `06-generator-utility.md`. If it fails, add the missing primitives to your Turn A script before saving the Primitives collection. Never proceed to aliasing until the audit passes.
+> 14. **TOKEN COUNTING RULE (CRITICAL)**: Count unique token PATHS, not mode instances. A Semantic token with light + dark modes is **1 token**, not 2. A Responsive token with mobile + tablet + desktop modes is **1 token**, not 3. The Turn D count table must reflect unique paths only. Never multiply by mode count.
+> 15. **Scoping Rule**: ALL tokens in ALL collections (including Primitives) receive correct scopes via `get_scope()` from `02-scoping-rules.md`. Pass `is_primitive=True` for Primitives. No token should have an absent scope key.
 
 **Output constraint:** Output only valid `.zip` files containing the structured JSON. Do not output `.skill` files or dump raw scripts — this confuses users who expect ready-to-import ZIPs and risks context truncation.
 
@@ -334,8 +350,6 @@ If the user requests changes (e.g. "change the blue palette"), modify only `gen_
 
 > **Critical performance rule for Path 2:** Do NOT attempt to write one giant script or generate all JSON in a single turn. Break the generation across multiple turns as instructed below. Wait for the user to reply "Next" before proceeding.
 
-> **Consolidated ZIP rule**: Do NOT output a ZIP widget in Turn A or Turn B. Only the final `design-tokens.zip` widget should be delivered during **TURN C**. Hold the JSON data in memory or session state until the final compilation phase.
-
 ---
 
 ### PATH 1: ONE-SHOT GENERATION
@@ -350,13 +364,15 @@ Then, jump directly to **Turn D (Token count reporting)**.
 *(Execute if complexity requires chunking)*
 
 ### TURN A — Core Foundations
-**Before writing Primitives:** Ensure all downstream alias targets are covered by including necessary primitive tokens. Apply the Backfilling Rule — do NOT enumerate individual tokens in your thinking block. Write your `brand_data` dictionary immediately, then generate:
+**Before writing Primitives:** You MUST audit ALL downstream collections — especially **Custom Collections (Q11)** — for new raw values (brand hexes, specific spacing numbers, etc). If a Custom Collection requires a new hex, you MUST define it in your `brand_data` Primitive mapping right now. Apply the Backfilling Rule here. Do NOT enumerate individual tokens in your thinking block. Write your `brand_data` dictionary immediately!
 
 Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET):
-1. **Primitives:** full colour palette + alpha variants (flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur
-2. **Theme:** every surface/text/border/interactive/feedback/overlay group, all states + shadow colour tokens
+1. **Primitives:** full colour palette + alpha variants (flat-sibling pattern) + all font tokens under `font/` group + layout primitive values + spacing + shadow geometry + borderWidth (0.3/0.5/0.8/1/2/4) + radius + blur. **ALL Primitives get scopes via `get_scope(is_primitive=True)`.**
+2. **Mode-switching collection (TIER-DEPENDENT):**
+   - **2-Tier / 3-Tier → Build `Semantic` with modes** (light.tokens.json + dark.tokens.json). Aliases Primitives. Every surface/text/border/interactive/feedback/overlay/icon/shadow group. **Minimum 55 unique token paths** (see Semantic Floor Rule in `05b`). Use the token count from Q7b (Lean/Standard/Enterprise) to decide density.
+   - **4-Tier → Build `Theme` with modes** (light.tokens.json + dark.tokens.json). Aliases Primitives. Same token groups as Semantic.
 
-*Stop here. Explicitly tell the user: "Turn A complete (Primitives & Theme). Type **Next** to generate structural collections (Responsive, Density, Layout, Effects)."*
+*Stop here. Explicitly tell the user: "Turn A complete (Primitives & [Semantic/Theme]). Type **Next** to generate structural collections (Responsive, Density, Layout, Effects)."*
 
 ---
 
@@ -367,7 +383,7 @@ Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET
 1. **Responsive:** all font size/lineHeight/letterSpacing roles × 3 breakpoints + radius × 3 breakpoints + borderWidth × 3 breakpoints
 2. **Density:** padding (x/y/top/bottom/left/right, with full xs-4xl scale nested under each direction — e.g. `padding/x/md`, values up to 64px at spacious) + gap (xs/sm/md/lg/xl/2xl/3xl/4xl — up to 128px at spacious) × 3 modes
 3. **Layout:** Layout structural variables (if selected)
-4. **Effects:** shadow sm/md/lg/xl (colour → Theme, geometry → Primitives) + blur tokens
+4. **Effects:** shadow sm/md/lg/xl (colour → **Semantic** (2/3-Tier) or **Theme** (4-Tier), geometry → Primitives) + blur tokens
 
 *Stop here. Explicitly tell the user: "Turn B complete. Type **Next** to generate the final component collections and compile the ZIP."*
 
@@ -377,12 +393,12 @@ Calculate the JSON for these collections ONLY (Save to memory, NO ZIP OUTPUT YET
 *(Wait for user to type "Next")*
 
 Calculate the JSON for these collections ONLY:
-1. **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → Theme
-2. **Semantic (if applicable):** as per 4-Tier architecture rules
-3. **Component Colors:** every component × every variant × every state × every Tier + icon duotone tokens
-4. **Component Dimensions:** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
+1. **Typography:** every role × 5 properties (fontSize/lineHeight/letterSpacing → Responsive; fontFamily/fontWeight → Primitives) + colour tokens → **Semantic** (2/3-Tier) or **Theme** (4-Tier)
+2. **Semantic (4-Tier ONLY):** Build `semantic.tokens.json` (single mode, no light/dark). Aliases **Theme**. Same token paths as Theme but one level higher in the chain. **Minimum 55 unique token paths.**
+3. **Component Colors (3-Tier / 4-Tier):** every component × every variant × every state + icon duotone tokens. **MUST alias Semantic — never Theme, never Primitives.** Run `validate_semantic_coverage()` before building.
+4. **Component Dimensions (3-Tier / 4-Tier):** all padding/gap (→ Density) + all radius/borderWidth (→ Responsive)
 
-**Critical step:** Now take the JSON from Turn A, Turn B, and Turn C. Package them all together and output **ONE SINGLE `.zip` WIDGET** containing everything. The structure must be folders numbered by import order (e.g. `1. Primitives`, `2. Theme`). No intermediate ZIPs or nested archives.
+**Critical step:** Now take the JSON from Turn A, Turn B, and Turn C. Package them all together and output **ONE SINGLE `.zip` WIDGET** containing everything. The structure must be folders numbered by import order per the chosen tier (e.g. 3-Tier: `1. Primitives`, `2. Semantic`; 4-Tier: `1. Primitives`, `2. Theme`, `3. Semantic`). No intermediate ZIPs or nested archives.
 
 *Automatically proceed to Turn D.*
 

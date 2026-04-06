@@ -1,34 +1,12 @@
 # Scoping Rules Reference
 
-## The Key-Absent Rule
+## The Universal Scoping Rule
 
-Primitives and all intermediate chain tokens have **no `com.figma.scopes` key at all** — not an empty array, not `null`. The key must be completely absent from the JSON object.
+**ALL tokens in ALL collections receive semantically correct scopes via `get_scope()`.** There are no exceptions. This includes Primitives, Responsive, Density, and every other parent collection.
 
-```json
-// ✅ CORRECT — primitive or middle-chain token
-{
-  "$type": "number",
-  "$value": 16,
-  "$extensions": {
-    "com.figma.variableId": "VariableID:10:42",
-    "com.figma.hiddenFromPublishing": true
-  }
-}
+The plugin's `autoScope` checkbox handles stripping scopes from `hiddenFromPublishing` tokens during import. The JSON must always include correct scopes so both paths work (checkbox ON or OFF).
 
-// ❌ WRONG — empty array still triggers scope picker
-{
-  "$extensions": {
-    "com.figma.scopes": []
-  }
-}
-
-// ❌ WRONG — ALL_SCOPES on a number primitive
-{
-  "$extensions": {
-    "com.figma.scopes": ["ALL_SCOPES"]
-  }
-}
-```
+> **Figma Behaviour Note:** When no `com.figma.scopes` key is present, Figma defaults to `ALL_SCOPES` — meaning the variable appears in every picker. This is NOT desirable for production systems. Always include explicit scopes.
 
 ## Valid Scope Strings by Variable Type
 
@@ -40,17 +18,17 @@ Primitives and all intermediate chain tokens have **no `com.figma.scopes` key at
 | `TEXT_FILL` | Text layer colour |
 | `STROKE` | Stroke/border colour |
 | `EFFECT_COLOR` | Shadow colour, glow colour |
-| `ALL_FILLS` | All fills including text — use only for general-purpose overlay/scrim colours |
+| `ALL_FILLS` | All fills including text — use for general-purpose colours (Primitives) and overlay/scrim |
 
 ### NUMBER type
 | Scope | What it controls in Figma |
 |---|---|
 | `WIDTH_HEIGHT` | Fixed width and height fields |
-| `GAP` | Auto-layout gap between children AND all 6 padding fields (x, y, top, bottom, left, right) |
+| `GAP` | Auto-layout gap between children AND all 6 padding fields |
 | `CORNER_RADIUS` | Corner radius |
 | `STROKE_FLOAT` | Stroke width |
 | `EFFECT_FLOAT` | Shadow blur, spread, offsetX, offsetY |
-| `OPACITY` | Layer opacity (0–100) — NOTE: this is a NUMBER token for the opacity field, separate from alpha in a colour value |
+| `OPACITY` | Layer opacity (0–100) |
 | `FONT_SIZE` | Font size |
 | `LINE_HEIGHT` | Line height |
 | `LETTER_SPACING` | Letter spacing / tracking |
@@ -61,13 +39,13 @@ Primitives and all intermediate chain tokens have **no `com.figma.scopes` key at
 | Scope | What it controls in Figma |
 |---|---|
 | `FONT_FAMILY` | Font family picker |
-| `FONT_STYLE` | Font weight/style picker — value is a named string: "Regular", "Medium", "SemiBold", "Bold" etc |
+| `FONT_STYLE` | Font weight/style picker |
 | `TEXT_CONTENT` | Text layer content override |
 
 ### BOOLEAN type
 | Scope | What it controls in Figma |
 |---|---|
-| `ALL_SCOPES` | Layer visibility — **this is the ONLY valid use of ALL_SCOPES** |
+| `ALL_SCOPES` | Layer visibility — **the ONLY valid use of ALL_SCOPES for booleans** |
 
 ## Scope Lookup by Token Path
 
@@ -85,14 +63,13 @@ Use this table. Never guess. If a path doesn't match, add it rather than default
 | `/blur/` (background blur) | number | `["EFFECT_FLOAT"]` |
 | `/shadow/opacity`, `/opacity` | number | `["OPACITY"]` |
 | `/height/`, `/width/`, `/iconSize` | number | `["WIDTH_HEIGHT"]` |
-| `/paddingX`, `/paddingY`, `/padding/`, `/padding.top`, `/padding.bottom`, `/padding.left`, `/padding.right` | number | `["GAP"]` ← padding is GAP scope in Figma autolayout |
+| `/paddingX`, `/paddingY`, `/padding/`, `/padding.top`, etc. | number | `["GAP"]` |
 | `/gap` | number | `["GAP"]` |
 | `/radius` | number | `["CORNER_RADIUS"]` |
 | `/borderWidth`, `/border/width/` | number | `["STROKE_FLOAT"]` |
-| `/fontSize`, `/font/size/`, `/responsive/font/size/` | number | `["FONT_SIZE"]` |
-| `/lineHeight`, `/font/lineHeight/`, `/responsive/font/lineHeight/` | number | `["LINE_HEIGHT"]` |
-| `/letterSpacing`, `/font/letterSpacing/`, `/responsive/font/letterSpacing/` | number | `["LETTER_SPACING"]` |
-| `/responsive/radius/`, `/responsive/borderWidth/` follow normal radius/borderWidth rules | number | `["CORNER_RADIUS"]` / `["STROKE_FLOAT"]` |
+| `/fontSize`, `/font/size/` | number | `["FONT_SIZE"]` |
+| `/lineHeight`, `/font/lineHeight/` | number | `["LINE_HEIGHT"]` |
+| `/letterSpacing`, `/font/letterSpacing/` | number | `["LETTER_SPACING"]` |
 | `/fontFamily`, `/font/family/` | string | `["FONT_FAMILY"]` |
 | `/fontStyle`, `/fontWeight`, `/font/weight/` | string | `["FONT_STYLE"]` |
 | `/state/`, boolean visibility | boolean | `["ALL_SCOPES"]` |
@@ -108,18 +85,20 @@ Shadow tokens are the most commonly wrong. Memorise:
 
 These are two completely different things:
 
-1. **Alpha in a colour value** — `"alpha": 0.24` baked into the colour object. This is how `primitives.color.black.opacity.24` works. It's a COLOR type. No OPACITY scope needed — the alpha IS the value.
+1. **Alpha in a colour value** — `"alpha": 0.24` baked into the colour object. This is how `primitives.color.black.opacity.24` works. It's a COLOR type. No OPACITY scope needed.
 
-2. **OPACITY scope** — a NUMBER type token (0–100) that drives Figma's layer opacity field. Used when you want to control the entire layer's opacity as a variable.
+2. **OPACITY scope** — a NUMBER type token (0–100) that drives Figma's layer opacity field.
 
 ## Python get_scope Helper
 
 ```python
-def get_scope(path: str, token_type: str) -> list:
+def get_scope(path: str, token_type: str, is_primitive: bool = False) -> list:
     """Returns correct Figma scope(s). Raises ValueError if unknown."""
     p = path.lower()
 
     if token_type == "color":
+        # Primitives: ALL_FILLS (raw colours usable anywhere)
+        if is_primitive: return ["ALL_FILLS"]
         if "/shadow/" in p and p.endswith("/color"): return ["EFFECT_COLOR"]
         if "/icon/" in p:                             return ["SHAPE_FILL", "STROKE"]
         if any(x in p for x in ["/text/", "/label/", "/on-"]): return ["TEXT_FILL"]
@@ -130,29 +109,30 @@ def get_scope(path: str, token_type: str) -> list:
         return ["FRAME_FILL", "SHAPE_FILL"]  # safe colour fallback
 
     if token_type == "number":
-        # Effects — must be EFFECT_FLOAT, never WIDTH_HEIGHT
         if any(x in p for x in ["/shadow/blur", "/shadow/spread",
                                   "/shadow/offsetx", "/shadow/offsety"]):
             return ["EFFECT_FLOAT"]
         if "/blur/" in p or p.endswith("/blur"):  return ["EFFECT_FLOAT"]
         if "/opacity" in p:                        return ["OPACITY"]
-        # Fixed dimensions
         if any(x in p for x in ["/height/", "/width/", "/iconsize"]):
             return ["WIDTH_HEIGHT"]
-        # All padding and gap → GAP scope
         if any(x in p for x in ["/paddinx", "/paddingy", "/padding",
                                   "/gap"]):
             return ["GAP"]
         if "/radius" in p:         return ["CORNER_RADIUS"]
         if "/borderwidth" in p:    return ["STROKE_FLOAT"]
-        if "/fontsize" in p:       return ["FONT_SIZE"]
-        if "/lineheight" in p:     return ["LINE_HEIGHT"]
-        if "/letterspacing" in p:  return ["LETTER_SPACING"]
+        if "/fontsize" in p or "/font/size/" in p:       return ["FONT_SIZE"]
+        if "/lineheight" in p or "/font/lineheight/" in p:     return ["LINE_HEIGHT"]
+        if "/letterspacing" in p or "/font/letterspacing/" in p:  return ["LETTER_SPACING"]
+        # Primitives: spacing → GAP, layout → WIDTH_HEIGHT
+        if is_primitive:
+            if "/spacing/" in p: return ["GAP"]
+            if "/layout/" in p: return ["WIDTH_HEIGHT"]
         raise ValueError(f"Unknown number scope for: {path}")
 
     if token_type == "string":
-        if "/fontfamily" in p:                      return ["FONT_FAMILY"]
-        if "/fontstyle" in p or "/fontweight" in p: return ["FONT_STYLE"]
+        if "/fontfamily" in p or "/font/family/" in p:    return ["FONT_FAMILY"]
+        if "/fontstyle" in p or "/fontweight" in p or "/font/weight/" in p: return ["FONT_STYLE"]
         return ["TEXT_CONTENT"]
 
     if token_type == "boolean":
@@ -161,4 +141,4 @@ def get_scope(path: str, token_type: str) -> list:
     raise ValueError(f"Unknown type '{token_type}' for: {path}")
 ```
 
-**Always call this function. Never hardcode scopes inline.**
+**Always call this function for ALL tokens (including Primitives). Never hardcode scopes inline. Pass `is_primitive=True` for Primitives collection tokens.**

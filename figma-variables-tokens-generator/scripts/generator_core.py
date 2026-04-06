@@ -268,10 +268,13 @@ def prebuild_ids(gen, paths, ns):
     return id_map
 
 
-def make_family(gen, tree, family, shades, alpha_hex):
+def make_family(gen, tree, family, shades, alpha_hex,
+                scope=None, hidden_from_publishing=False):
     """
     Generate a full colour family (shades + alpha variants).
     shades: list of (key, hex_str). alpha_hex: base hex for alpha variants.
+    scope: list of Figma scopes (e.g. ["ALL_FILLS"] for Primitives).
+    hidden_from_publishing: bool for parent collections.
     """
     for key, h in shades:
         r = int(h[1:3], 16) / 255
@@ -280,7 +283,9 @@ def make_family(gen, tree, family, shades, alpha_hex):
         token = gen.create_token(
             f"color/{family}/{key}", 10, "color",
             value={"colorSpace": "srgb", "components": [r, g, b],
-                   "alpha": 1, "hex": h})
+                   "alpha": 1, "hex": h},
+            scope=scope,
+            hidden_from_publishing=hidden_from_publishing)
         gen.nest_token(tree, f"color/{family}/{key}", token)
 
     ar = int(alpha_hex[1:3], 16) / 255
@@ -293,5 +298,8 @@ def make_family(gen, tree, family, shades, alpha_hex):
         token = gen.create_token(
             path, 10, "color",
             value={"colorSpace": "srgb", "components": [ar, ag, ab],
-                   "alpha": a_val, "hex": alpha_hex})
+                   "alpha": a_val, "hex": alpha_hex},
+            scope=scope,
+            hidden_from_publishing=hidden_from_publishing)
         gen.nest_token(tree, path, token)
+

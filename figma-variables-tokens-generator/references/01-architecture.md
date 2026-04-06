@@ -1,38 +1,117 @@
 # Architecture Reference
 
+## Tier Definitions
+
+### 1-Tier — Prototypes
+```
+Primitives + Typography
+Optional: Responsive
+```
+- Primitives is the only color collection. Designers pick directly from Primitives.
+- Typography aliases Primitives for strings, Responsive for numbers (if Responsive exists).
+
+### 2-Tier — Small/Medium Apps
+```
+Primitives
+  └── Semantic (modes: light/dark) ← aliases Primitives
+        └── Typography (colors → Semantic, numbers → Responsive)
+Optional: Responsive, Density, Effects, Layout
+```
+- **Semantic has light/dark modes.** It is the picker tip for colors.
+- No Component Colors — designers pick directly from Semantic.
+- This matches Material Design 3's architecture (Reference → System tokens).
+
+### 3-Tier — Production Systems
+```
+Primitives
+  └── Semantic (modes: light/dark) ← aliases Primitives
+        └── Component Colors ← aliases Semantic (picker tip)
+        └── Component Dimensions ← aliases Density + Responsive
+        └── Typography (colors → Semantic, numbers → Responsive)
+Optional: Responsive (recommended), Density, Effects, Layout
+```
+- **Semantic has light/dark modes.** Same as 2-Tier but with a Component layer.
+- Component Colors is the picker tip — designers pick from here, not Semantic.
+- Semantic is hidden from publishing in this tier.
+
+### 4-Tier — Enterprise / Multi-Brand
+```
+Primitives
+  └── Theme (modes: light/dark) ← aliases Primitives (palette switching)
+        └── Semantic (NO modes) ← aliases Theme (intent mapping)
+              └── Component Colors ← aliases Semantic (picker tip)
+              └── Component Dimensions ← aliases Density + Responsive
+              └── Typography (colors → Theme, numbers → Responsive)
+Optional: Responsive (recommended), Density, Effects, Layout
+```
+- **Theme has light/dark modes.** Semantic does NOT have modes.
+- Theme provides an extra indirection for swapping entire palettes (multi-brand).
+- Both Theme and Semantic are hidden from publishing.
+
+> **If a user asks for a "Theme collection" in 2/3-Tier:** Explain that in industry-standard practice, the mode-switching layer is called Semantic in simpler architectures. Ask: *"Do you specifically need a separate palette-switching layer (4-Tier), or do you want light/dark modes on your Semantic collection (2/3-Tier)?"* If they insist on Theme, upgrade them to 4-Tier.
+
+---
+
 ## The Golden Rule of Scope Ownership
-**Scope lives at the TIP of an alias chain.** Middle-chain tokens (Theme, Semantic, Responsive, Density) ALSO get semantically correct scopes — not for picker control, but so the variable is correctly categorised in Figma. The tip scope still wins for the picker.
+**Every token in every collection receives semantically correct scopes via `get_scope()`.** There are no exceptions — including Primitives. The plugin's `autoScope` checkbox handles stripping scopes from hidden collections during import.
 
 ## Scope Assignment by Chain Position
 
 | Position | Rule |
 |---|---|
-| Primitives | NO scope key — absent entirely |
-| Theme | Apply semantically correct scope per token path |
+| Primitives | Apply `get_scope()` — same rules as all other collections. For colors: `ALL_FILLS` fallback. |
+| Semantic (2/3-Tier) | Apply semantically correct scope per token path |
+| Theme (4-Tier only) | Apply semantically correct scope per token path |
 | Responsive | Apply correct scope (FONT_SIZE, LINE_HEIGHT, LETTER_SPACING, CORNER_RADIUS, STROKE_FLOAT) |
-| Semantic | Apply semantically correct scope per token path |
 | Density | GAP scope on all tokens |
+| Layout | WIDTH_HEIGHT on all tokens |
 | Effects | EFFECT_COLOR on colours, EFFECT_FLOAT on numbers |
 | Component Colors | Apply correct scope — picker tip for colours |
 | Component Dimensions | Apply correct scope — picker tip for dimensions |
 | Typography | Apply correct scope — picker tip for font tokens |
-| Layout | WIDTH_HEIGHT on all tokens |
+
+---
 
 ## Complete Alias Chains
 
+### Colour Chain — 2-Tier
 ```
-── COLOUR CHAIN ──────────────────────────────────────────
-primitives/color/blue/500          hardcoded #3B82F6, NO scope
+primitives/color/blue/500          hardcoded #3B82F6, ALL_FILLS
         ↓
-Theme: surface/primary             FRAME_FILL+SHAPE_FILL, aliases Primitives
-Semantic: surface/primary          FRAME_FILL+SHAPE_FILL, aliases Theme
+Semantic: surface/primary          FRAME_FILL+SHAPE_FILL, aliases Primitives
+                                   (modes: light aliases blue/50, dark aliases blue/900)
+                                   ← picker tip
+```
+
+### Colour Chain — 3-Tier
+```
+primitives/color/blue/500          hardcoded #3B82F6, ALL_FILLS
+        ↓
+Semantic: surface/primary          FRAME_FILL+SHAPE_FILL, aliases Primitives
+                                   (modes: light aliases blue/50, dark aliases blue/900)
         ↓
 Component Colors: color/button/primary/default/background
                                    FRAME_FILL+SHAPE_FILL
-                                   Aliases Semantic (4-Tier) 
-                                   OR Theme (2/3-Tier) ← picker tip
+                                   Aliases Semantic ← picker tip
+```
 
-── TYPOGRAPHY CHAIN (Triple Alias Rule) ──────────────────
+### Colour Chain — 4-Tier
+```
+primitives/color/blue/500          hardcoded #3B82F6, ALL_FILLS
+        ↓
+Theme: surface/primary             FRAME_FILL+SHAPE_FILL, aliases Primitives
+                                   (modes: light aliases blue/50, dark aliases blue/900)
+        ↓
+Semantic: surface/primary          FRAME_FILL+SHAPE_FILL, aliases Theme
+                                   (single mode — no light/dark)
+        ↓
+Component Colors: color/button/primary/default/background
+                                   FRAME_FILL+SHAPE_FILL
+                                   Aliases Semantic ← picker tip
+```
+
+### Typography Chain (Triple Alias Rule — all tiers)
+```
 1. Numerical (fontSize, lineHeight, letterSpacing):
    primitives/font/size/16 → Responsive: font/size/body → Typography: body/fontSize
 
@@ -40,151 +119,131 @@ Component Colors: color/button/primary/default/background
    primitives/font/family/sans → Typography: body/fontFamily (Direct to Primitives)
 
 3. Colors:
-   primitives/color/grey/900 → Theme: text/primary → Typography: color/primary
+   2/3-Tier: primitives/color/grey/900 → Semantic: text/primary → Typography: color/primary
+   4-Tier:   primitives/color/grey/900 → Theme: text/primary → Typography: color/primary
+```
 
-── SPACING / DENSITY CHAIN ───────────────────────────────
-primitives/spacing/16              hardcoded 16, NO scope
+### Spacing / Density Chain
+```
+primitives/spacing/16              hardcoded 16, GAP
         ↓
 Density: padding/x/md              GAP — compact=8, comfortable=12, spacious=16 ← picker tip
                                    (Component Dimensions aliases Density for padding/gap)
+```
 
-── RADIUS / BORDER CHAIN ───────────────────────────
-primitives/radius/md               hardcoded 8, NO scope
+### Radius / Border Chain
+```
+primitives/radius/md               hardcoded 8, CORNER_RADIUS
         ↓
 Responsive: radius/md              CORNER_RADIUS — mobile=6, tablet=7, desktop=8 ← picker tip
                                    (Component Dimensions aliases Responsive for radius/border)
 
-primitives/borderWidth/sm          hardcoded 1, NO scope
+primitives/borderWidth/sm          hardcoded 1, STROKE_FLOAT
         ↓
-Responsive: borderWidth/sm         STROKE_FLOAT — same across breakpoints (or slightly varied) ← picker tip
+Responsive: borderWidth/sm         STROKE_FLOAT — same across breakpoints ← picker tip
+```
 
-── SHADOW / EFFECTS CHAIN ────────────────────────────────
-primitives/shadow/sm/blur          hardcoded 8, NO scope
+### Shadow / Effects Chain
+```
+primitives/shadow/sm/blur          hardcoded 8, EFFECT_FLOAT
         ↓
 Effects: shadow/sm/blur            EFFECT_FLOAT, aliases Primitives ← picker tip
 
-Theme: shadow/sm/color             EFFECT_COLOR, aliases primitives/color/black/a16 (light)
-                                              or primitives/color/white/a8 (dark)
+2/3-Tier: Semantic: shadow/sm/color  EFFECT_COLOR, aliases primitives/color/black/a16 (light mode)
+4-Tier:   Theme: shadow/sm/color     EFFECT_COLOR, aliases primitives/color/black/a16 (light mode)
         ↓
-Effects: shadow/sm/color           EFFECT_COLOR, aliases Theme/shadow/sm/color ← picker tip
-         (no modes — Theme handles light/dark switching)
+Effects: shadow/sm/color           EFFECT_COLOR, aliases Semantic (2/3-Tier) or Theme (4-Tier)
+         (no modes — mode-switching collection handles light/dark)
 ```
 
-## Responsive Collection
-
-**Purpose:** Single source for all breakpoint-aware NUMBER tokens. Replaces per-shade radius hardcoding and connects Typography numerical values to breakpoints.
-
-**Modes:** `mobile` / `tablet` / `desktop`
-**Aliases:** Primitives
-**Contains:**
-- `font/size/*` — responsive font sizes (e.g. body: 14→15→16)
-- `font/lineHeight/*` — responsive line heights
-- `font/letterSpacing/*` — responsive letter spacing
-- `radius/none` through `radius/full` — same names as Primitives but breakpoint-appropriate values
-- `borderWidth/hairline` through `borderWidth/lg` — forwarded from Primitives (usually same across breakpoints)
-
-**Design-appropriate radius values (NOT a blind forward from Primitives):**
-| Token | Mobile | Tablet | Desktop |
-|---|---|---|---|
-| `radius/none` | 0 | 0 | 0 |
-| `radius/xs` | 2 | 2 | 2 |
-| `radius/sm` | 3 | 4 | 4 |
-| `radius/md` | 6 | 7 | 8 |
-| `radius/lg` | 10 | 11 | 12 |
-| `radius/xl` | 14 | 15 | 16 |
-| `radius/2xl` | 20 | 22 | 24 |
-| `radius/full` | 9999 | 9999 | 9999 |
-
-**Design-appropriate font sizes (example — body):**
-| Token | Mobile | Tablet | Desktop |
-|---|---|---|---|
-| `font/size/body` | 14 | 15 | 16 |
-| `font/size/body-sm` | 12 | 13 | 14 |
-| `font/size/body-lg` | 16 | 17 | 18 |
-| `font/size/heading` | 28 | 32 | 36 |
-| `font/size/display` | 40 | 48 | 60 |
-
-> ⚠️ Responsive aliases Primitives — it picks the semantically correct Primitives value per breakpoint. E.g. `radius/lg` on mobile aliases `primitives/radius/lg` (12px) is fine, but on mobile you may alias `primitives/radius/md` (8px) instead. The KEY RULE: the mapping must be visually sensible, not a blind 1:1 forward.
-
-## Effects Collection (Updated)
-
-**Modes:** NONE — single `effects.tokens.json` file
-**Shadow colours:** alias `Theme` (Theme handles light/dark switching via its own modes)
-**Shadow geometry:** alias `Primitives` directly
-
-Effects has NO modes of its own. When the designer switches the Theme mode (light↔dark), the shadow colours in Effects automatically update because Effects → Theme → Primitives.
-
-## Component Dimensions (Updated)
-
-**Modes:** NONE — single `component-dimensions.tokens.json` file
-**Padding + gap:** alias `Density` (Density handles compact/comfortable/spacious switching)
-**Radius + border width:** alias `Responsive` (Responsive handles mobile/tablet/desktop switching)
-
-Component Dimensions has NO modes. Breakpoint and density switching is controlled by swapping modes on Responsive and Density collections respectively.
+---
 
 ## Import Order — CRITICAL, must be exact
 
-| # | Collection | Depends on | Notes |
-|---|---|---|---|
-| 1 | Primitives | nothing | Always first |
-| 2 | Theme | Primitives | Colour chains start here |
-| 3 | Semantic | Theme | 4-Tier only. Aliases Theme only — import immediately after Theme |
-| 4 | Responsive | Primitives | Must exist before Typography + Component Dimensions |
-| 5 | Density | Primitives | Must exist before Component Dimensions |
-| 6 | Layout | nothing | Independent |
-| 7 | Effects | Primitives + Theme | Colours alias Theme, geometry aliases Primitives |
-| 8 | Typography | Primitives + Theme + Responsive | Font numbers from Responsive, colours from Theme |
-| 9 | Component Colors | Semantic (4-Tier) or Theme (2/3-Tier) | Colour tip |
-| 10 | Component Dimensions | Density + Responsive | Dimension tip |
+### 2-Tier Import Order
+| # | Collection | Depends on |
+|---|---|---|
+| 1 | Primitives | nothing |
+| 2 | Semantic | Primitives |
+| 3 | Responsive* | Primitives |
+| 4 | Density* | Primitives |
+| 5 | Layout* | nothing |
+| 6 | Effects* | Primitives + Semantic |
+| 7 | Typography | Primitives + Semantic + Responsive |
 
-> Semantic is now position 3 — it only aliases Theme, so it belongs immediately after Theme.
-> Effects is position 7 (after Theme) because shadow colour tokens alias Theme.
-> Responsive is position 4 because Typography and Component Dimensions both depend on it.
+### 3-Tier Import Order
+| # | Collection | Depends on |
+|---|---|---|
+| 1 | Primitives | nothing |
+| 2 | Semantic | Primitives |
+| 3 | Responsive* | Primitives |
+| 4 | Density* | Primitives |
+| 5 | Layout* | nothing |
+| 6 | Effects* | Primitives + Semantic |
+| 7 | Typography | Primitives + Semantic + Responsive |
+| 8 | Component Colors | Semantic |
+| 9 | Component Dimensions | Density + Responsive |
+
+### 4-Tier Import Order
+| # | Collection | Depends on |
+|---|---|---|
+| 1 | Primitives | nothing |
+| 2 | Theme | Primitives |
+| 3 | Semantic | Theme |
+| 4 | Responsive* | Primitives |
+| 5 | Density* | Primitives |
+| 6 | Layout* | nothing |
+| 7 | Effects* | Primitives + Theme |
+| 8 | Typography | Primitives + Theme + Responsive |
+| 9 | Component Colors | Semantic |
+| 10 | Component Dimensions | Density + Responsive |
+
+*If generated.
+
+> **Dynamic numbering rule:** The ZIP folder numbering must match the import order for the user's chosen tier. A 2-Tier ZIP starts with `1. Primitives/`, `2. Semantic/`. A 4-Tier ZIP has `1. Primitives/`, `2. Theme/`, `3. Semantic/`.
+
+---
 
 ## Mode File Naming — No Generic "Value" Names
 
-Every collection mode file must have a unique, descriptive name. No two collections should share the same mode name.
+Every collection mode file must have a unique, descriptive name.
 
 | Collection | Mode file name(s) |
 |---|---|
 | Primitives | `primitives.tokens.json` |
-| Theme | `light.tokens.json`, `dark.tokens.json` |
+| Semantic (2/3-Tier) | `light.tokens.json`, `dark.tokens.json` |
+| Semantic (4-Tier) | `semantic.tokens.json` |
+| Theme (4-Tier only) | `light.tokens.json`, `dark.tokens.json` |
 | Responsive | `mobile.tokens.json`, `tablet.tokens.json`, `desktop.tokens.json` |
 | Density | `compact.tokens.json`, `comfortable.tokens.json`, `spacious.tokens.json` |
 | Layout | `xs.tokens.json`, `sm.tokens.json`, `md.tokens.json`, `lg.tokens.json`, `xl.tokens.json`, `xxl.tokens.json` |
 | Effects | `effects.tokens.json` |
 | Typography | `typography.tokens.json` |
-| Semantic | `semantic.tokens.json` |
 | Component Colors | `component-colors.tokens.json` |
 | Component Dimensions | `component-dimensions.tokens.json` |
 
-The `$metadata.modeName` field inside each file must match the file name (without `.tokens.json`):
-- `"modeName": "primitives"` not `"modeName": "Value"`
-- `"modeName": "typography"` not `"modeName": "Value"`
-- `"modeName": "semantic"` not `"modeName": "Value"`
+The `$metadata.modeName` field inside each file must match the file name (without `.tokens.json`).
 
-## Scoping Instructions for User (End of Generation)
+---
 
-Tell the user which collections to **turn off scoping** on (hide from variable pickers) based on their Tier choice and whether optional collections act purely as alias parents. 
+## Hidden from Publishing
 
-**CRITICAL FIGMA BUG:** "No scope" variables in JSON default to "all scopes" upon import. Users must manually turn off scoping (select all variables → remove all scopes) for intermediate parent collections.
+`hiddenFromPublishing: true` is set on ALL tokens in parent-only (non-tip) collections. The plugin's `autoScope` checkbox strips scopes from hidden tokens on import.
 
-The general rule: **only TIP collections should appear in pickers.** Hide intermediate collections.
+| Collection | 1-Tier | 2-Tier | 3-Tier | 4-Tier |
+|---|---|---|---|---|
+| Primitives | Visible | **Hidden** | **Hidden** | **Hidden** |
+| Semantic | N/A | Visible (tip) | **Hidden** | **Hidden** |
+| Theme | N/A | N/A | N/A | **Hidden** |
+| Responsive | N/A | **Hidden** | **Hidden** | **Hidden** |
+| Density | N/A | **Hidden** | **Hidden** | **Hidden** |
+| Component Colors | N/A | N/A | Visible (tip) | Visible (tip) |
+| Component Dimensions | N/A | N/A | Visible (tip) | Visible (tip) |
+| Typography | Visible | Visible | Visible | Visible |
+| Effects | N/A | Visible | Visible | Visible |
+| Layout | N/A | Visible | Visible | Visible |
 
-| Tier | Hide from picker | Keep visible (tips) |
-|---|---|---|
-| 1-Tier | Nothing | Primitives |
-| 2-Tier | Primitives, Responsive*, Density* | Theme, Typography, Layout, Effects, Component Dimensions* |
-| 3-Tier | Primitives, Theme (suggested), Responsive*, Density* | Component Colors, Component Dimensions, Typography, Layout, Effects |
-| 4-Tier | Primitives, Theme (suggested), Semantic (suggested), Responsive*, Density* | Component Colors, Component Dimensions, Typography, Layout, Effects |
-
-*\*If generated.*
-
-**Key notes:**
-- 1-Tier: Primitives is the only collection. Never turn it off here.
-- 2-Tier: Theme IS the colour tip (no Component Colors). Only hide Primitives (and structural parents).
-- 3/4-Tier: Hiding Theme and Semantic are suggestions only — tell user to verify and keep scoping ON if they apply those tokens directly to their designs instead of going through Component Colors.
-- "Hide from publishing" (library sharing) is different from picker visibility (scope control per variable). Both should be set correctly. The JSON sets `hiddenFromPublishing: true` on: **always** Primitives, Responsive, Density; **3/4-Tier** Theme; **4-Tier** Semantic. In 2-Tier, Theme is the tip — do NOT hide it.
+---
 
 ## Collection Names — No Brand Prefix Ever
 
@@ -203,6 +262,6 @@ The general rule: **only TIP collections should appear in pickers.** Hide interm
 
 ## Figma Known Behaviour
 
-- Primitives show `ALL_SCOPES` in Figma's variable panel even with no scope key in JSON. This is Figma's default display — cannot be overridden from JSON. Not a bug.
+- Primitives and all collections show `ALL_SCOPES` in Figma's variable panel if the plugin's `autoScope` checkbox is unchecked. When checked, the plugin clears scopes on all `hiddenFromPublishing` tokens.
 - Effects with no modes: Figma accepts single-mode collections. The mode name (`effects`) is just a label.
 - Component Dimensions with no modes: same as above — single-mode collection is valid.

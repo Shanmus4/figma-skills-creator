@@ -9,6 +9,7 @@ const COLLECTION_ORDER = [
 
 const MODE_ORDER = {
   'Theme':     ['light', 'dark'],
+  'Semantic':  ['light', 'dark'],
   'Responsive':['mobile', 'tablet', 'desktop'],
   'Density':   ['comfortable', 'compact', 'spacious'],
   'Layout':    ['xs', 'sm', 'md', 'lg', 'xl', 'xxl']

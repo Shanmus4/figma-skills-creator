@@ -2,37 +2,68 @@
 
 ## Table of Contents
 1. [Primitives](#primitives) — colour palette, spacing, shadow geometry, font primitives
-2. [Theme Collection](#theme-collection) — surface, text, border, interactive, feedback, overlay
-3. [Responsive Collection](#responsive-collection-new) — font size/lineHeight/letterSpacing × 3 breakpoints
-4. [Density Collection](#density-collection) — padding/gap × compact/comfortable/spacious
-5. [Layout Collection](#layout-collection) — grid columns/margins/gutters × xs→xxl
-6. [Effects Collection](#effects-collection) — shadows and blur tokens
-7. [Typography Collection](#typography-collection) — font roles × 5 properties
+2. [Semantic Collection (2/3-Tier)](#semantic-collection-23-tier) — modes: light/dark, aliases Primitives
+3. [Theme Collection (4-Tier only)](#theme-collection-4-tier-only) — modes: light/dark, aliases Primitives
+4. [Responsive Collection](#responsive-collection) — font size/lineHeight/letterSpacing × 3 breakpoints
+5. [Density Collection](#density-collection) — padding/gap × compact/comfortable/spacious
+6. [Layout Collection](#layout-collection) — grid columns/margins/gutters × xs→xxl
+7. [Effects Collection](#effects-collection) — shadows and blur tokens
+8. [Typography Collection](#typography-collection) — font roles × 5 properties
 
 ---
 
 ## Primitives
 **Mode file:** `primitives.tokens.json`
 **$metadata.modeName:** `"primitives"`
+**Publishing:** `hiddenFromPublishing: true` on all tokens (except 1-Tier where Primitives is the only collection)
 See `04-primitives.md` for full token list.
-Key rule: NO scope key on any token. NO aliasData. All values hardcoded.
+
+Key rules:
+- All values hardcoded — NO aliasData.
+- ALL tokens receive correct scopes via `get_scope()`. For primitive colors: `ALL_FILLS`. For spacing: `GAP`. For radius: `CORNER_RADIUS`. Etc.
 
 ---
 
-## Theme Collection
+## Semantic Collection (2/3-Tier)
 **Mode files:** `light.tokens.json`, `dark.tokens.json`
-**Aliases:** Primitives
+**$metadata.modeName:** `"light"`, `"dark"`
 **Default mode:** light
+**Aliases:** Primitives
+**Publishing:** Visible (tip) in 2-Tier; `hiddenFromPublishing: true` in 3-Tier
 
-Theme is a middle-chain collection but every token gets a semantically correct scope. This is so variables are correctly categorised in Figma even though Component Colors is the picker tip.
+> [!IMPORTANT]
+> **In 2-Tier and 3-Tier, Semantic IS the mode-switching collection.** It replaces what was previously called "Theme." It has light/dark modes and aliases Primitives directly.
 
-**Shadow colour tokens live here (NEW):**
+Semantic is a mode-switching collection — every token gets a semantically correct scope. This is so variables are correctly categorised in Figma.
+
+**Shadow colour tokens live here:**
 ```
-theme/shadow/sm/color    EFFECT_COLOR → primitives/color/black/a16 (light) / primitives/color/white/a8 (dark)
-theme/shadow/md/color    EFFECT_COLOR → primitives/color/black/a24 (light) / primitives/color/white/a16 (dark)
-theme/shadow/lg/color    EFFECT_COLOR → primitives/color/black/a32 (light) / primitives/color/white/a24 (dark)
-theme/shadow/xl/color    EFFECT_COLOR → primitives/color/black/a40 (light) / primitives/color/white/a32 (dark)
+semantic/shadow/sm/color    EFFECT_COLOR → primitives/color/black/a16 (light) / primitives/color/white/a8 (dark)
+semantic/shadow/md/color    EFFECT_COLOR → primitives/color/black/a24 (light) / primitives/color/white/a16 (dark)
+semantic/shadow/lg/color    EFFECT_COLOR → primitives/color/black/a32 (light) / primitives/color/white/a24 (dark)
+semantic/shadow/xl/color    EFFECT_COLOR → primitives/color/black/a40 (light) / primitives/color/white/a32 (dark)
 ```
+
+> The full list of Semantic token groups (surface, text, border, interactive, feedback, overlay, icon, shadow) is in `05b-collections-semantic-components.md`. That reference applies to BOTH 2/3-Tier Semantic (with modes) and 4-Tier Semantic (without modes) — the token paths are the same, only the alias target and mode setup differ.
+
+---
+
+## Theme Collection (4-Tier only)
+**Mode files:** `light.tokens.json`, `dark.tokens.json`
+**$metadata.modeName:** `"light"`, `"dark"`
+**Default mode:** light
+**Aliases:** Primitives
+**Publishing:** `hiddenFromPublishing: true` — Theme is a parent, never consumed directly
+
+> [!IMPORTANT]
+> **Theme ONLY exists in 4-Tier architecture.** In 2-Tier and 3-Tier, its role is performed by the Semantic collection (with modes). Do NOT generate a Theme collection for 2-Tier or 3-Tier.
+
+Theme is a palette-switching layer. It provides an extra level of indirection for multi-brand or complex enterprise systems. Every token gets a semantically correct scope.
+
+**Theme uses the SAME token paths as Semantic.** The difference is:
+- Theme aliases Primitives directly
+- Semantic (in 4-Tier) aliases Theme instead of Primitives
+- Theme has light/dark modes; Semantic (in 4-Tier) does NOT
 
 ### surface group → FRAME_FILL + SHAPE_FILL
 ```
@@ -44,6 +75,10 @@ theme/surface/sunken
 theme/surface/inverted
 theme/surface/disabled
 theme/surface/brand
+theme/surface/input
+theme/surface/card
+theme/surface/modal
+theme/surface/popover
 ```
 
 ### text group → TEXT_FILL
@@ -61,13 +96,9 @@ theme/text/on-danger
 theme/text/on-surface-variant
 theme/text/on-feedback-error
 theme/text/on-feedback-success
+theme/text/on-feedback-warning
+theme/text/on-feedback-info
 ```
-
-### The "On" Pattern (Theme)
-Theme defines the primary "on" tokens that Semantic will later alias.
-- `on-brand`: → `primitives/white` (light/dark)
-- `on-feedback-*`: → `primitives/white`
-- `on-surface-variant`: → `theme/text/secondary`
 
 ### border group → STROKE
 ```
@@ -79,6 +110,9 @@ theme/border/error
 theme/border/disabled
 theme/border/inverse
 theme/border/brand
+theme/border/success
+theme/border/warning
+theme/border/info
 ```
 
 ### interactive group
@@ -88,16 +122,25 @@ theme/interactive/primary/hover        FRAME_FILL+SHAPE_FILL
 theme/interactive/primary/pressed      FRAME_FILL+SHAPE_FILL
 theme/interactive/primary/disabled     FRAME_FILL+SHAPE_FILL
 theme/interactive/primary/text         TEXT_FILL
+theme/interactive/primary/border       STROKE
 theme/interactive/secondary/default    FRAME_FILL+SHAPE_FILL
 theme/interactive/secondary/hover      FRAME_FILL+SHAPE_FILL
 theme/interactive/secondary/pressed    FRAME_FILL+SHAPE_FILL
+theme/interactive/secondary/disabled   FRAME_FILL+SHAPE_FILL
 theme/interactive/secondary/text       TEXT_FILL
+theme/interactive/secondary/border     STROKE
 theme/interactive/ghost/hover          FRAME_FILL+SHAPE_FILL
 theme/interactive/ghost/pressed        FRAME_FILL+SHAPE_FILL
+theme/interactive/ghost/text           TEXT_FILL
 theme/interactive/destructive/default  FRAME_FILL+SHAPE_FILL
 theme/interactive/destructive/hover    FRAME_FILL+SHAPE_FILL
 theme/interactive/destructive/pressed  FRAME_FILL+SHAPE_FILL
+theme/interactive/destructive/disabled FRAME_FILL+SHAPE_FILL
 theme/interactive/destructive/text     TEXT_FILL
+theme/interactive/destructive/border   STROKE
+theme/interactive/link/default         TEXT_FILL
+theme/interactive/link/hover           TEXT_FILL
+theme/interactive/link/visited         TEXT_FILL
 ```
 
 ### feedback group
@@ -120,15 +163,37 @@ theme/feedback/info/text         TEXT_FILL
 theme/feedback/info/icon         SHAPE_FILL+STROKE
 ```
 
+### icon group
+```
+theme/icon/default     SHAPE_FILL+STROKE
+theme/icon/muted       SHAPE_FILL+STROKE
+theme/icon/brand       SHAPE_FILL+STROKE
+theme/icon/inverse     SHAPE_FILL+STROKE
+theme/icon/disabled    SHAPE_FILL+STROKE
+theme/icon/error       SHAPE_FILL+STROKE
+theme/icon/success     SHAPE_FILL+STROKE
+theme/icon/warning     SHAPE_FILL+STROKE
+theme/icon/info        SHAPE_FILL+STROKE
+```
+
 ### overlay group → ALL_FILLS
 ```
 theme/overlay/scrim         ALL_FILLS → primitives/color/black/a48 (light) / black/a64 (dark)
 theme/overlay/tooltip       FRAME_FILL+SHAPE_FILL
+theme/overlay/backdrop      ALL_FILLS
+```
+
+### shadow colors → EFFECT_COLOR
+```
+theme/shadow/sm/color    EFFECT_COLOR → primitives/color/black/a16 (light) / primitives/color/white/a8 (dark)
+theme/shadow/md/color    EFFECT_COLOR → primitives/color/black/a24 (light) / primitives/color/white/a16 (dark)
+theme/shadow/lg/color    EFFECT_COLOR → primitives/color/black/a32 (light) / primitives/color/white/a24 (dark)
+theme/shadow/xl/color    EFFECT_COLOR → primitives/color/black/a40 (light) / primitives/color/white/a32 (dark)
 ```
 
 ---
 
-## Responsive Collection (NEW)
+## Responsive Collection
 **Mode files:** `mobile.tokens.json`, `tablet.tokens.json`, `desktop.tokens.json`
 **$metadata.modeName:** `"mobile"`, `"tablet"`, `"desktop"`
 **Default mode:** mobile
@@ -142,7 +207,6 @@ This collection provides breakpoint-aware values for all numerical tokens used b
 > **COVERAGE AUDIT:** Before generating the Responsive JSON, you MUST run `validate_responsive_coverage()` to ensure every value you intend to use (e.g. `lineheight: 52`) already exists as a path in your Primitives registry. If it doesn't, you must backfill it in Primitives BEFORE saving the Primitives mode file.
 
 ### font/size/* → FONT_SIZE
-Each token aliases a Primitives font/size value. Mobile uses smaller values, desktop uses larger.
 ```
 responsive/font/size/display       mobile→40  tablet→48  desktop→60
 responsive/font/size/heading       mobile→28  tablet→32  desktop→36
@@ -182,7 +246,7 @@ responsive/font/letterSpacing/caption     mobile→1   tablet→1   desktop→1
 responsive/font/letterSpacing/overline    mobile→2   tablet→2   desktop→2
 
 **RULE: Extended Roles letterSpacing**
-If use chooses Extended Scale, you MUST generate unique Responsive paths for every role to prevent ID collapsing:
+If user chooses Extended Scale, you MUST generate unique Responsive paths for every role to prevent ID collapsing:
 - `display-sm` → -2
 - `heading-lg` → -1
 - `heading-sm` → 0
@@ -196,7 +260,6 @@ If use chooses Extended Scale, you MUST generate unique Responsive paths for eve
 ```
 
 ### radius/* → CORNER_RADIUS
-Values are design-appropriate per breakpoint (NOT a blind forward).
 ```
 responsive/radius/none    mobile→0     tablet→0     desktop→0
 responsive/radius/xs      mobile→2     tablet→2     desktop→2
@@ -209,7 +272,6 @@ responsive/radius/full    mobile→9999  tablet→9999  desktop→9999
 ```
 
 ### borderWidth/* → STROKE_FLOAT
-Border widths are generally consistent across breakpoints (same alias from Primitives in all 3 modes).
 ```
 responsive/borderWidth/hairline   0.3  (all modes)
 responsive/borderWidth/thin       0.5  (all modes)
@@ -227,9 +289,7 @@ responsive/borderWidth/lg         4    (all modes)
 **Default mode:** comfortable
 **Aliases:** Primitives/spacing/*
 **Scope:** GAP on ALL tokens
-**Publishing:** `hiddenFromPublishing: true` on all tokens — Density is a structural parent, never consumed directly
-
-Padding tokens cover the 6 directions (x, y, top, bottom, left, right). Each direction contains a full size scale (xs through 4xl). Values scale significantly across density modes. Gap tokens also range from xs through 4xl.
+**Publishing:** `hiddenFromPublishing: true` on all tokens
 
 ```
 density/padding/x/xs       GAP   compact=2,   comfortable=4,   spacious=6
@@ -257,8 +317,6 @@ density/gap/4xl         GAP   compact=64,  comfortable=96,  spacious=128
 **Aliases:** Primitives `layout/*`
 **Scope:** WIDTH_HEIGHT on ALL tokens
 
-Layout tokens MUST use aliasData pointing at `layout/{breakpoint}/{property}` in Primitives. Never hardcode values.
-
 ```
 layout/column/count     → Primitives: layout/{breakpoint}/columns
 layout/column/margin    → Primitives: layout/{breakpoint}/margin
@@ -272,33 +330,32 @@ layout/column/maxWidth  → Primitives: layout/{breakpoint}/maxWidth
 ## Effects Collection
 **Mode file:** `effects.tokens.json` (SINGLE MODE — no light/dark)
 **$metadata.modeName:** `"effects"`
-**Default mode:** N/A (single mode)
-**Shadow colours:** alias Theme
+**Shadow colours:** alias Semantic (2/3-Tier) or Theme (4-Tier) — the mode-switching collection
 **Shadow geometry:** alias Primitives
 **Scope:** EFFECT_COLOR on colours, EFFECT_FLOAT on numbers
 
-Shadow colour tokens point at Theme. When designer switches Theme mode (light↔dark), shadow colours automatically update in Effects. No modes needed on Effects itself.
+Shadow colour tokens point at the mode-switching collection. When designer switches modes (light↔dark), shadow colours automatically update in Effects. No modes needed on Effects itself.
 
 ```
-effects/shadow/sm/color    EFFECT_COLOR → theme/shadow/sm/color
+effects/shadow/sm/color    EFFECT_COLOR → semantic/shadow/sm/color (2/3-Tier) or theme/shadow/sm/color (4-Tier)
 effects/shadow/sm/x        EFFECT_FLOAT → primitives/shadow/sm/x
 effects/shadow/sm/y        EFFECT_FLOAT → primitives/shadow/sm/y
 effects/shadow/sm/blur     EFFECT_FLOAT → primitives/shadow/sm/blur
 effects/shadow/sm/spread   EFFECT_FLOAT → primitives/shadow/sm/spread
 
-effects/shadow/md/color    EFFECT_COLOR → theme/shadow/md/color
+effects/shadow/md/color    EFFECT_COLOR → semantic/shadow/md/color or theme/shadow/md/color
 effects/shadow/md/x        EFFECT_FLOAT → primitives/shadow/md/x
 effects/shadow/md/y        EFFECT_FLOAT → primitives/shadow/md/y
 effects/shadow/md/blur     EFFECT_FLOAT → primitives/shadow/md/blur
 effects/shadow/md/spread   EFFECT_FLOAT → primitives/shadow/md/spread
 
-effects/shadow/lg/color    EFFECT_COLOR → theme/shadow/lg/color
+effects/shadow/lg/color    EFFECT_COLOR → semantic/shadow/lg/color or theme/shadow/lg/color
 effects/shadow/lg/x        EFFECT_FLOAT → primitives/shadow/lg/x
 effects/shadow/lg/y        EFFECT_FLOAT → primitives/shadow/lg/y
 effects/shadow/lg/blur     EFFECT_FLOAT → primitives/shadow/lg/blur
 effects/shadow/lg/spread   EFFECT_FLOAT → primitives/shadow/lg/spread
 
-effects/shadow/xl/color    EFFECT_COLOR → theme/shadow/xl/color
+effects/shadow/xl/color    EFFECT_COLOR → semantic/shadow/xl/color or theme/shadow/xl/color
 effects/shadow/xl/x        EFFECT_FLOAT → primitives/shadow/xl/x
 effects/shadow/xl/y        EFFECT_FLOAT → primitives/shadow/xl/y
 effects/shadow/xl/blur     EFFECT_FLOAT → primitives/shadow/xl/blur
@@ -310,48 +367,44 @@ effects/blur/lg    EFFECT_FLOAT → primitives/blur/lg
 effects/blur/xl    EFFECT_FLOAT → primitives/blur/xl
 ```
 
-Variable IDs: same variableId in the single effects.tokens.json file. No mode duplication needed.
-
 ---
 
 ## Typography Collection
 **Mode file:** `typography.tokens.json` (SINGLE MODE)
 **$metadata.modeName:** `"typography"`
-**Aliases:** Responsive (numerical values) + Primitives (font/family, font/weight) + Theme (colour tokens)
+**Aliases:** Responsive (numerical values) + Primitives (font/family, font/weight) + mode-switching collection (colour tokens)
 
-Typography colour tokens alias Theme (not Semantic) because Typography is a cross-cutting concern used across all Tiers.
+Typography colour tokens alias the **mode-switching collection**: Semantic in 2/3-Tier, Theme in 4-Tier.
 
 > [!IMPORTANT]
-> **BACKFILLING CHECK:** Before aliasing any `fontSize`, `lineHeight`, or `letterSpacing` value from `Responsive`, verify that the raw numerical value exists in your **Primitives** collection (e.g. if `subheading` mobile needs `26px`, `font/lineHeight/26` MUST exist in Primitives). If missing, add it to Primitives first.
+> **BACKFILLING CHECK:** Before aliasing any `fontSize`, `lineHeight`, or `letterSpacing` value from `Responsive`, verify that the raw numerical value exists in your **Primitives** collection. If missing, add it to Primitives first.
 
 ### Tokens per role — numerical values alias Responsive
 ```
 typography/{role}/fontSize       FONT_SIZE      → Responsive: font/size/{role}
 typography/{role}/lineHeight     LINE_HEIGHT    → Responsive: font/lineHeight/{role}
 typography/{role}/letterSpacing  LETTER_SPACING → Responsive: font/letterSpacing/{role}
-                                                  (if no matching letterSpacing role, alias closest)
-typography/{role}/fontFamily     FONT_FAMILY    → Primitives: font/family/{name}  ← direct to Primitives
-typography/{role}/fontWeight     FONT_STYLE     → Primitives: font/weight/{name}  ← direct to Primitives
+typography/{role}/fontFamily     FONT_FAMILY    → Primitives: font/family/{name}
+typography/{role}/fontWeight     FONT_STYLE     → Primitives: font/weight/{name}
 
 > **RULE: LetterSpacing Path Mapping**
-> There is a schema mismatch between Primitives and Responsive for `letterSpacing`:
-> - **Primitives**: Uses semantic names (e.g. `font/letterspacing/tight`).
-> - **Responsive**: Uses role names (e.g. `responsive/font/letterspacing/display`).
-> When building Typography, you MUST alias **Responsive** for numerical compatibility across breakpoints. Do NOT alias Primitives directly for letterSpacing roles.
+> Primitives uses semantic names (e.g. `font/letterspacing/tight`).
+> Responsive uses role names (e.g. `responsive/font/letterspacing/display`).
+> Typography MUST alias Responsive for numerical compatibility across breakpoints.
 ```
 
-### Font colour tokens → alias Theme
+### Font colour tokens → alias mode-switching collection
 ```
-typography/color/primary    TEXT_FILL → theme/text/primary
-typography/color/secondary  TEXT_FILL → theme/text/secondary
-typography/color/tertiary   TEXT_FILL → theme/text/tertiary
-typography/color/disabled   TEXT_FILL → theme/text/disabled
-typography/color/inverse    TEXT_FILL → theme/text/inverse
-typography/color/link       TEXT_FILL → theme/text/link
-typography/color/error      TEXT_FILL → theme/feedback/error/text
-typography/color/success    TEXT_FILL → theme/feedback/success/text
-typography/color/warning    TEXT_FILL → theme/feedback/warning/text
-typography/color/on-brand   TEXT_FILL → theme/text/on-brand
+typography/color/primary    TEXT_FILL → semantic/text/primary (2/3) or theme/text/primary (4)
+typography/color/secondary  TEXT_FILL → semantic/text/secondary or theme/text/secondary
+typography/color/tertiary   TEXT_FILL → semantic/text/tertiary or theme/text/tertiary
+typography/color/disabled   TEXT_FILL → semantic/text/disabled or theme/text/disabled
+typography/color/inverse    TEXT_FILL → semantic/text/inverse or theme/text/inverse
+typography/color/link       TEXT_FILL → semantic/text/link or theme/text/link
+typography/color/error      TEXT_FILL → semantic/feedback/error/text or theme/feedback/error/text
+typography/color/success    TEXT_FILL → semantic/feedback/success/text or theme/feedback/success/text
+typography/color/warning    TEXT_FILL → semantic/feedback/warning/text or theme/feedback/warning/text
+typography/color/on-brand   TEXT_FILL → semantic/text/on-brand or theme/text/on-brand
 ```
 
 ### Standard type roles
@@ -372,5 +425,4 @@ typography/color/on-brand   TEXT_FILL → theme/text/on-brand
 
 ---
 
-
-> Continued in `05b-collections-semantic-components.md` — Semantic, Component Colors, Component Dimensions
+> Continued in `05b-collections-semantic-components.md` — Semantic token groups, Component Colors, Component Dimensions
