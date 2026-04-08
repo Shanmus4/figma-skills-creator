@@ -240,6 +240,72 @@ You (the AI) must choose the safest generation path independently. Do NOT ask th
 
 ---
 
+## ALIAS INTEGRITY SYSTEM (Non-Negotiable)
+
+Every import error, every "VariableID:0:0", every "FAILURE" status in the plugin traces back to a broken alias chain. This system prevents ALL of them.
+
+### The Chain Verification Algorithm
+
+Run this BEFORE saving EACH collection to the ZIP:
+
+For every token in the collection:
+1. Does it have `aliasData`? → If no, skip (it's a hardcoded value, safe).
+2. Extract `targetVariableName` and `targetVariableSetName`.
+3. Does the target path exist in the target collection's registry?
+   → **NO** → STOP. Backfill the missing token in the parent collection.
+   → **YES** → Is the target ALSO an alias?
+     → **YES** → Follow the chain recursively (repeat from step 2 for the target).
+     → **NO** → Chain is complete. This token is safe.
+
+### Timing Rule (CRITICAL)
+ALL backfilled primitives must be created BEFORE `save_mode("Primitives", ...)`.
+Primitives are saved first. Once saved, you cannot retroactively add to them.
+**Therefore**: Build your ENTIRE data map (all collections mentally mapped) in the
+Python script BEFORE saving any collection. Think of it as: plan everything, then save in order.
+
+### Common Chain Patterns to Verify
+- `CC → Semantic → Primitives` (3-Tier)
+- `CC → Semantic → Theme → Primitives` (4-Tier)
+- `Typography → Responsive → Primitives` (font sizes, lineHeights, letterSpacing)
+- `Typography → Primitives` (font family/weight — direct, no Responsive)
+- `Effects → Semantic/Theme` (shadow colours) + `Effects → Primitives` (shadow geometry)
+- `CD → Density → Primitives` (padding/gap)
+- `CD → Responsive → Primitives` (radius/borderWidth)
+- `Custom → [parent] → ... → Primitives`
+
+### Final Gate
+After ALL collections are built → call `verify_chain_completeness()`.
+If it passes with zero broken links → the ZIP is safe to deliver.
+
+---
+
+## GUARDRAILED AUTONOMY (Prevents Rabbit Holes)
+
+You are a Design System Architect. You have autonomy to decide:
+- ✅ WHICH tokens to create within each group (derive from user's component list)
+- ✅ HOW MANY tokens per group (the 94 paths in 05b are the floor, not the ceiling — expand when needed)
+- ✅ WHAT light/dark mappings to use (follow shade inversion: light surfaces = lighter shades, dark surfaces = darker shades)
+- ✅ WHETHER to add extra Semantic roles (if the user's component list demands them)
+
+You do NOT have autonomy to:
+- ❌ Invent new collection types not discussed with the user
+- ❌ Skip backfilling checks or chain verification
+- ❌ Deviate from the alias chain hierarchy (CC → Semantic → Primitives, never skip)
+- ❌ Use scopes not defined in `02-scoping-rules.md`
+- ❌ Generate tokens "just in case" — every token must serve a purpose in the user's system
+
+### Working Backwards Rule
+Don't deliberate about which tokens to include. Work backwards mechanically:
+1. Read the user's confirmed component list
+2. For each component → determine which CC tokens it needs (background, text, border, icon × states)
+3. For each CC token → determine which Semantic token it must alias
+4. For each Semantic token → determine which Primitive shade it references
+5. Build those chains. Generate those tokens. If any Semantic tokens are missing from the 05b default list → add them. Stop.
+
+If you find yourself writing paragraphs of reasoning about token selection → STOP. You're in a rabbit hole. Go back to step 1.
+
+---
+
 ## PHASE 3 — GENERATION
 
 ### 🏗️ READ LOAD STAGE 3: Technical Implementation

@@ -2,6 +2,39 @@
 
 > Part A (Primitives → Typography) is in `05a-collections-core.md`
 
+## How to Use This Reference
+
+The ~94 token paths below are the **PRODUCTION DEFAULT** — the floor, not the ceiling.
+
+**Default behaviour (90% of cases):** Follow the paths below as-is. Don't deliberate 
+about which tokens to include. Just build them. This saves tokens and prevents hallucination.
+
+**When to ADD more tokens:**
+- User's component list requires Semantic tokens not listed here → add them
+- User chose Standard or Enterprise density → add the Enterprise Extensions (section below)
+- User provides existing token system with additional roles → match their system
+- Component Colors need a Semantic alias that doesn't exist yet → add it to Semantic FIRST
+- Custom collections require new Semantic intermediaries → add them
+
+**When to REMOVE tokens:**
+- User explicitly says "I don't need feedback tokens" → omit the feedback group
+- User chose Lean density → use only the mandatory roles per group (see counts below)
+- User says "only 5 shades of green" → adjust Primitives AND update any Semantic tokens that referenced removed shades
+
+**When to STOP thinking:**
+If you catch yourself writing paragraphs deciding which tokens to include → STOP.
+Go back to the user's component list and work backwards mechanically:
+Component → CC token → Semantic token → Primitive shade. Build those chains. Done.
+
+**What NEVER changes regardless of adaptation:**
+- Scopes (always from `02-scoping-rules.md`)
+- Alias chain direction (CC → Semantic → Primitives, never skip a tier)
+- aliasData JSON syntax (always from `03-json-format.md`)
+- hiddenFromPublishing per tier (always from `01-architecture.md`)
+- Token count minimums: Lean ≥55, Standard ≥80, Enterprise ≥120
+
+---
+
 ## Semantic Collection — Token Groups
 
 > [!IMPORTANT]

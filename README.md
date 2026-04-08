@@ -138,6 +138,23 @@ The Skill supports building scalable systems from 1 to 4 Tiers. We utilize "Tier
 
 ---
 
+## Updating
+
+If a new version of this skill is released with updated rules or bug fixes, you can update it right from your terminal.
+
+**To update this specific skill:**
+Re-run the install command. The CLI detects the existing folder and updates it in place.
+```bash
+npx skills add Shanmus4/figma-variables-tokens-generator
+```
+
+**To update all installed skills across your system:**
+```bash
+npx skills update
+```
+
+---
+
 ## Uninstalling
 
 If you installed the skill via `npx skills`, you can quickly remove it using the interactive removal menu:

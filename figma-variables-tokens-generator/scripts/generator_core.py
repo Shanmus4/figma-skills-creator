@@ -228,31 +228,38 @@ class DesignTokenGenerator:
 
         return zip_bytes
 
-    def verify_all_aliases(self):
-        """Cross-collection verification gate."""
+    def verify_chain_completeness(self):
+        """Recursive alias chain verification. Call after ALL collections built.
+        Walks every alias, verifies full chain to Primitives is intact."""
         broken = []
         for filename, data in self.output_files.items():
-            self._check_aliases(data, filename, broken)
+            self._walk_aliases(data, filename, broken)
         if broken:
-            print(f"WARNING: {len(broken)} broken alias(es) found:")
-            for b in broken:
-                print(f"  - {b}")
-        return broken
+            raise ValueError(
+                f"CHAIN BREAK: {len(broken)} broken alias links:\n" +
+                "\n".join(f"  ✗ {b}" for b in broken[:20]) +
+                (f"\n  ...and {len(broken)-20} more" if len(broken) > 20 else "")
+            )
+        return True
 
-    def _check_aliases(self, node, path, broken):
-        """Recursive alias checker."""
+    def _walk_aliases(self, node, context, broken):
+        """Recursively find aliasData in JSON tree and verify targets exist."""
         if isinstance(node, dict):
-            if "$extensions" in node:
-                alias_data = node["$extensions"].get("com.figma.aliasData")
-                if (alias_data and
-                        alias_data.get("targetVariableId") ==
-                        "VariableID:0:0"):
-                    broken.append(
-                        f"{path}: {alias_data.get('targetVariableName')}")
-            else:
-                for k, v in node.items():
-                    if not k.startswith("$"):
-                        self._check_aliases(v, f"{path}/{k}", broken)
+            ad = node.get("$extensions", {}).get("com.figma.aliasData")
+            if ad:
+                vid = ad.get("targetVariableId", "")
+                name = ad.get("targetVariableName", "")
+                if vid == "VariableID:0:0" or not vid:
+                    broken.append(f"{context}: '{name}' → UNRESOLVED (0:0)")
+                elif name and name.lower() not in self.token_registry:
+                    broken.append(f"{context}: '{name}' → NOT IN REGISTRY")
+            for key, val in node.items():
+                if not key.startswith("$"):
+                    self._walk_aliases(val, f"{context}/{key}", broken)
+
+    def verify_all_aliases(self):
+        """Cross-collection verification gate. Now delegates to recursive walker."""
+        return self.verify_chain_completeness()
 
 
 # ─── Standalone Helpers ────────────────────────────────────────────────────────

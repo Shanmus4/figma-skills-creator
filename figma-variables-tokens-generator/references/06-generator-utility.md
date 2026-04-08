@@ -111,6 +111,7 @@ class DesignTokenGenerator:
             for s in known_sets:
                 if target_path.startswith(s):
                     target_path = target_path.replace(s, "", 1)
+                    break  # CRITICAL: Stop after stripping one prefix to prevent double-stripping!
             
             # Use specific target_registry if provided (Fixes Cross-Tier verification)
             registry = target_registry if target_registry is not None else self.token_registry
@@ -187,11 +188,36 @@ class DesignTokenGenerator:
         # Returns ZIP bytes or saves to disk
         pass
 
-    def verify_all_aliases(self):
-        """Cross-collection verification gate (Bug 2 & 7)"""
+    def verify_chain_completeness(self):
+        """Recursive alias chain verification. Call after ALL collections built."""
+        broken = []
         for filename, data in self.output_files.items():
-            # (Recursive traversal to find all aliasData and verify target_vid != 0:0)
-            pass
+            self._walk_aliases(data, filename, broken)
+        if broken:
+            raise ValueError(
+                f"CHAIN BREAK: {len(broken)} broken alias links:\n" +
+                "\n".join(f"  ✗ {b}" for b in broken[:20]) +
+                (f"\n  ...and {len(broken)-20} more" if len(broken) > 20 else "")
+            )
+        return True
+
+    def _walk_aliases(self, node, context, broken):
+        """Recursively find aliasData in JSON tree and verify targets exist."""
+        if isinstance(node, dict):
+            ad = node.get("$extensions", {}).get("com.figma.aliasData")
+            if ad:
+                vid = ad.get("targetVariableId", "")
+                name = ad.get("targetVariableName", "")
+                if vid == "VariableID:0:0" or not vid:
+                    broken.append(f"{context}: '{name}' → UNRESOLVED (0:0)")
+                elif name and name.lower() not in self.token_registry:
+                    broken.append(f"{context}: '{name}' → NOT IN REGISTRY")
+            for key, val in node.items():
+                if not key.startswith("$"):
+                    self._walk_aliases(val, f"{context}/{key}", broken)
+
+    def verify_all_aliases(self):
+        return self.verify_chain_completeness()
 ```
 
 ## How to use in Generation Phase:

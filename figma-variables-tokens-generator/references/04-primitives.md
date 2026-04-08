@@ -1,5 +1,21 @@
 # Primitives Reference
 
+## Dynamic Scale Adaptation
+
+The scales below (10 colour shades, 16 spacing values, etc.) are the STANDARD defaults. 
+Use them as-is unless the user explicitly requests changes:
+
+- **"I only want 5 shades of green"** → generate only those 5, but verify no downstream 
+  alias (Semantic, Theme, Responsive) references a removed shade
+- **"Here's my existing token system"** → match their existing scales, don't force the defaults
+- **"I want a minimal system"** → use Lean density counts, but still include every shade 
+  that downstream collections reference
+- **No specific request** → use the full standard scales below (the default path)
+
+After adapting scales: run `verify_chain_completeness()` before saving to catch any broken references.
+
+---
+
 ## Rules (non-negotiable)
 1. Hardcoded values ONLY — no aliases. Apply correct scopes via `get_scope(is_primitive=True)` from `02-scoping-rules.md`.
 2. `hiddenFromPublishing: true` on every token

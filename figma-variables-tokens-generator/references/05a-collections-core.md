@@ -60,130 +60,21 @@ semantic/shadow/xl/color    EFFECT_COLOR → primitives/color/black/a40 (light) 
 
 Theme is a palette-switching layer. It provides an extra level of indirection for multi-brand or complex enterprise systems. Every token gets a semantically correct scope.
 
-**Theme uses the SAME token paths as Semantic.** The difference is:
-- Theme aliases Primitives directly
-- Semantic (in 4-Tier) aliases Theme instead of Primitives
-- Theme has light/dark modes; Semantic (in 4-Tier) does NOT
+### Theme Token Groups — Derived from Semantic
 
-### surface group → FRAME_FILL + SHAPE_FILL
-```
-theme/surface/page
-theme/surface/default
-theme/surface/raised
-theme/surface/overlay
-theme/surface/sunken
-theme/surface/inverted
-theme/surface/disabled
-theme/surface/brand
-theme/surface/input
-theme/surface/card
-theme/surface/modal
-theme/surface/popover
-```
+**Theme uses the SAME token groups and paths as Semantic.** Read `05b-collections-semantic-components.md` for the complete group definitions (surface, text, border, interactive, feedback, icon, overlay, shadow).
 
-### text group → TEXT_FILL
-```
-theme/text/primary
-theme/text/secondary
-theme/text/tertiary
-theme/text/placeholder
-theme/text/disabled
-theme/text/inverse
-theme/text/link
-theme/text/link-hover
-theme/text/on-brand
-theme/text/on-danger
-theme/text/on-surface-variant
-theme/text/on-feedback-error
-theme/text/on-feedback-success
-theme/text/on-feedback-warning
-theme/text/on-feedback-info
-```
+The ONLY differences between Theme and Semantic:
+- **Theme aliases Primitives** directly (light/dark mappings per the 05b light/dark patterns)
+- **Semantic (4-Tier) aliases Theme** — NOT Primitives
+- **Theme has light/dark modes**; Semantic (4-Tier) has NO modes (single `semantic.tokens.json`)
 
-### border group → STROKE
-```
-theme/border/default
-theme/border/subtle
-theme/border/strong
-theme/border/focus
-theme/border/error
-theme/border/disabled
-theme/border/inverse
-theme/border/brand
-theme/border/success
-theme/border/warning
-theme/border/info
-```
+When generating Theme: take every group from 05b, keep the same paths, change alias targets from `semantic/*` to `primitives/*` with appropriate light/dark shade mappings.
 
-### interactive group
-```
-theme/interactive/primary/default      FRAME_FILL+SHAPE_FILL
-theme/interactive/primary/hover        FRAME_FILL+SHAPE_FILL
-theme/interactive/primary/pressed      FRAME_FILL+SHAPE_FILL
-theme/interactive/primary/disabled     FRAME_FILL+SHAPE_FILL
-theme/interactive/primary/text         TEXT_FILL
-theme/interactive/primary/border       STROKE
-theme/interactive/secondary/default    FRAME_FILL+SHAPE_FILL
-theme/interactive/secondary/hover      FRAME_FILL+SHAPE_FILL
-theme/interactive/secondary/pressed    FRAME_FILL+SHAPE_FILL
-theme/interactive/secondary/disabled   FRAME_FILL+SHAPE_FILL
-theme/interactive/secondary/text       TEXT_FILL
-theme/interactive/secondary/border     STROKE
-theme/interactive/ghost/hover          FRAME_FILL+SHAPE_FILL
-theme/interactive/ghost/pressed        FRAME_FILL+SHAPE_FILL
-theme/interactive/ghost/text           TEXT_FILL
-theme/interactive/destructive/default  FRAME_FILL+SHAPE_FILL
-theme/interactive/destructive/hover    FRAME_FILL+SHAPE_FILL
-theme/interactive/destructive/pressed  FRAME_FILL+SHAPE_FILL
-theme/interactive/destructive/disabled FRAME_FILL+SHAPE_FILL
-theme/interactive/destructive/text     TEXT_FILL
-theme/interactive/destructive/border   STROKE
-theme/interactive/link/default         TEXT_FILL
-theme/interactive/link/hover           TEXT_FILL
-theme/interactive/link/visited         TEXT_FILL
-```
+> [!IMPORTANT]
+> **You are NOT limited to the 94 paths listed in 05b.** If the user's needs (component list, density, custom collections) require additional Semantic/Theme paths, ADD them. The 05b paths are the production floor, not the ceiling. Always expand when the alias chain demands it.
 
-### feedback group
-```
-theme/feedback/error/surface     FRAME_FILL+SHAPE_FILL
-theme/feedback/error/border      STROKE
-theme/feedback/error/text        TEXT_FILL
-theme/feedback/error/icon        SHAPE_FILL+STROKE
-theme/feedback/success/surface   FRAME_FILL+SHAPE_FILL
-theme/feedback/success/border    STROKE
-theme/feedback/success/text      TEXT_FILL
-theme/feedback/success/icon      SHAPE_FILL+STROKE
-theme/feedback/warning/surface   FRAME_FILL+SHAPE_FILL
-theme/feedback/warning/border    STROKE
-theme/feedback/warning/text      TEXT_FILL
-theme/feedback/warning/icon      SHAPE_FILL+STROKE
-theme/feedback/info/surface      FRAME_FILL+SHAPE_FILL
-theme/feedback/info/border       STROKE
-theme/feedback/info/text         TEXT_FILL
-theme/feedback/info/icon         SHAPE_FILL+STROKE
-```
-
-### icon group
-```
-theme/icon/default     SHAPE_FILL+STROKE
-theme/icon/muted       SHAPE_FILL+STROKE
-theme/icon/brand       SHAPE_FILL+STROKE
-theme/icon/inverse     SHAPE_FILL+STROKE
-theme/icon/disabled    SHAPE_FILL+STROKE
-theme/icon/error       SHAPE_FILL+STROKE
-theme/icon/success     SHAPE_FILL+STROKE
-theme/icon/warning     SHAPE_FILL+STROKE
-theme/icon/info        SHAPE_FILL+STROKE
-```
-
-### overlay group → ALL_FILLS
-```
-theme/overlay/scrim         ALL_FILLS → primitives/color/black/a48 (light) / black/a64 (dark)
-theme/overlay/tooltip       FRAME_FILL+SHAPE_FILL
-theme/overlay/backdrop      ALL_FILLS
-```
-
-### shadow colors → EFFECT_COLOR
+### shadow colors → EFFECT_COLOR (syntax reference)
 ```
 theme/shadow/sm/color    EFFECT_COLOR → primitives/color/black/a16 (light) / primitives/color/white/a8 (dark)
 theme/shadow/md/color    EFFECT_COLOR → primitives/color/black/a24 (light) / primitives/color/white/a16 (dark)
