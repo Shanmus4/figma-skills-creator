@@ -48,9 +48,21 @@ class DesignTokenGenerator:
         self.counters[ns] = self.counters.get(ns, 0) + 1
         return f"VariableID:{ns}:{self.counters[ns]}"
 
+    def canonical_path(self, path):
+        """
+        Single source of truth for token path identity.
+        Preserve semantic spelling; normalize only transport noise.
+        """
+        if not isinstance(path, str):
+            raise TypeError(f"Token path must be a string, got {type(path)!r}")
+        normalized = path.strip().replace("\\", "/")
+        while "//" in normalized:
+            normalized = normalized.replace("//", "/")
+        return normalized
+
     def resolve_id(self, id_map, path):
         """Safe accessor for pre-built ID maps (Fixes KeyError / Case Drift)"""
-        key = path.lower()
+        key = self.canonical_path(path)
         if key not in id_map:
             raise KeyError(
                 f"PREBUILD MISS: Path '{key}' not found in ID map. "
@@ -62,12 +74,17 @@ class DesignTokenGenerator:
         missing = []
         for role, modes in resp_size.items():
             for v in (modes if isinstance(modes, list) else modes.values()):
-                if f"font/size/{v}" not in self.token_registry:
-                    missing.append(f"font/size/{v}")
+                target = self.canonical_path(f"font/size/{v}")
+                if target not in self.token_registry:
+                    missing.append(target)
         for role, modes in resp_lh.items():
             for v in (modes if isinstance(modes, list) else modes.values()):
-                if f"font/lineheight/{v}" not in self.token_registry:
-                    missing.append(f"font/lineheight/{v}")
+                candidates = [
+                    self.canonical_path(f"font/lineHeight/{v}"),
+                    self.canonical_path(f"font/lineheight/{v}"),
+                ]
+                if not any(candidate in self.token_registry for candidate in candidates):
+                    missing.append(candidates[0])
         if missing:
             raise KeyError(
                 f"BACKFILL REQUIRED: Missing paths in Primitives. "
@@ -77,7 +94,9 @@ class DesignTokenGenerator:
         """Pre-flight audit for Component Colors -> Semantic coverage."""
         missing = []
         for cc_path, target_sem_path in cc_map.items():
-            clean_target = target_sem_path.lower().replace("semantic/", "", 1)
+            clean_target = self.canonical_path(target_sem_path)
+            if clean_target.startswith("semantic/"):
+                clean_target = clean_target.replace("semantic/", "", 1)
             if clean_target not in sem_registry:
                 missing.append(f"{cc_path} -> {target_sem_path}")
         if missing:
@@ -88,7 +107,7 @@ class DesignTokenGenerator:
     def create_token(self, name, ns, type, value=None, scope=None,
                      alias_target=None, alias_set=None, vid=None,
                      target_registry=None, hidden_from_publishing=False):
-        path = name.lower()
+        path = self.canonical_path(name)
         vid = vid or self.next_id(ns)
         self.token_registry[path] = vid
 
@@ -110,7 +129,7 @@ class DesignTokenGenerator:
             ext["com.figma.scopes"] = scope
 
         if alias_target:
-            target_path = alias_target.lower()
+            target_path = self.canonical_path(alias_target)
             # CRITICAL ALIAS RULE - Strip collection prefix from path for valid JSON
             known_sets = [
                 "primitives/", "theme/", "responsive/", "density/",
@@ -119,11 +138,12 @@ class DesignTokenGenerator:
             ]
             # Automatically add the target collection name to handle arbitrary custom collections
             if alias_set:
-                known_sets.append(f"{alias_set.lower()}/")
+                known_sets.append(f"{self.canonical_path(alias_set).lower()}/")
                 
             for s in known_sets:
                 if target_path.startswith(s):
                     target_path = target_path.replace(s, "", 1)
+                    break
 
             registry = (target_registry if target_registry is not None
                         else self.token_registry)
@@ -155,7 +175,7 @@ class DesignTokenGenerator:
         return syntax
 
     def format_syntax(self, path, platform="WEB"):
-        p = path.replace('/', '-').replace(' ', '-')
+        p = self.canonical_path(path).replace('/', '-').replace(' ', '-')
         while '--' in p:
             p = p.replace('--', '-')
         # WEB: Uses chosen syntax_format (css, kebab, camel, etc.)
@@ -176,6 +196,7 @@ class DesignTokenGenerator:
         return p
 
     def nest_token(self, tree, path, token):
+        path = self.canonical_path(path)
         parts = path.split('/')
         curr = tree
         for part in parts[:-1]:
@@ -201,6 +222,9 @@ class DesignTokenGenerator:
                 zf.writestr(filepath, json.dumps(tree, indent=2))
 
         zip_bytes = buf.getvalue()
+
+        if output_dir is None:
+            output_dir = "exports"
 
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -251,15 +275,123 @@ class DesignTokenGenerator:
                 name = ad.get("targetVariableName", "")
                 if vid == "VariableID:0:0" or not vid:
                     broken.append(f"{context}: '{name}' → UNRESOLVED (0:0)")
-                elif name and name.lower() not in self.token_registry:
+                elif name and self.canonical_path(name) not in self.token_registry:
                     broken.append(f"{context}: '{name}' → NOT IN REGISTRY")
             for key, val in node.items():
                 if not key.startswith("$"):
                     self._walk_aliases(val, f"{context}/{key}", broken)
 
+    def flatten_emitted_paths(self):
+        """Returns {collection_set_name: set(paths)} from the actual emitted JSON."""
+        emitted = {}
+        for filepath, data in self.output_files.items():
+            folder = filepath.split("/", 1)[0]
+            collection_name = folder.split(". ", 1)[1] if ". " in folder else folder
+            path_set = emitted.setdefault(collection_name, set())
+            self._walk_paths(data, "", path_set)
+        return emitted
+
+    def verify_emitted_alias_targets(self):
+        """
+        Validates alias targets against the emitted JSON artifact, not only the registry.
+        This catches path identity drift between emitted keys and internal registries.
+        """
+        emitted = self.flatten_emitted_paths()
+        broken = []
+        for filepath, data in self.output_files.items():
+            self._walk_emitted_aliases(data, filepath, emitted, broken)
+        if broken:
+            raise ValueError(
+                f"EMITTED ARTIFACT BREAK: {len(broken)} invalid emitted alias targets:\n" +
+                "\n".join(f"  ✗ {b}" for b in broken[:20]) +
+                (f"\n  ...and {len(broken)-20} more" if len(broken) > 20 else "")
+            )
+        return True
+
+    def verify_emitted_scope_families(self):
+        """Checks critical scope families on the emitted artifact."""
+        broken = []
+        for filepath, data in self.output_files.items():
+            self._walk_scopes(data, filepath, broken)
+        if broken:
+            raise ValueError(
+                f"SCOPE BREAK: {len(broken)} emitted scope mismatches:\n" +
+                "\n".join(f"  ✗ {b}" for b in broken[:20]) +
+                (f"\n  ...and {len(broken)-20} more" if len(broken) > 20 else "")
+            )
+        return True
+
+    def _walk_paths(self, node, prefix, out):
+        if isinstance(node, dict):
+            if "$value" in node:
+                if prefix:
+                    out.add(self.canonical_path(prefix))
+                return
+            for key, val in node.items():
+                if key.startswith("$"):
+                    continue
+                next_prefix = f"{prefix}/{key}" if prefix else key
+                self._walk_paths(val, next_prefix, out)
+
+    def _walk_emitted_aliases(self, node, context, emitted, broken):
+        if isinstance(node, dict):
+            ad = node.get("$extensions", {}).get("com.figma.aliasData")
+            if ad:
+                target_set = ad.get("targetVariableSetName", "")
+                target_name = self.canonical_path(ad.get("targetVariableName", ""))
+                if target_set and target_name:
+                    collection_paths = emitted.get(target_set)
+                    if collection_paths is None:
+                        broken.append(f"{context}: target set '{target_set}' missing from emitted ZIP")
+                    elif target_name not in collection_paths:
+                        broken.append(f"{context}: '{target_name}' missing from emitted set '{target_set}'")
+            for key, val in node.items():
+                if not key.startswith("$"):
+                    self._walk_emitted_aliases(val, f"{context}/{key}", emitted, broken)
+
+    def _walk_scopes(self, node, context, broken):
+        if isinstance(node, dict):
+            if "$value" in node:
+                token_type = node.get("$type")
+                scopes = node.get("$extensions", {}).get("com.figma.scopes", [])
+                path = self.canonical_path(context.split("/", 1)[1] if "/" in context else context)
+                expected = self._expected_scopes_for_path(path, token_type)
+                if expected is not None and scopes != expected:
+                    broken.append(f"{context}: expected {expected}, got {scopes}")
+                return
+            for key, val in node.items():
+                if not key.startswith("$"):
+                    next_context = f"{context}/{key}" if context else key
+                    self._walk_scopes(val, next_context, broken)
+
+    def _expected_scopes_for_path(self, path, token_type):
+        p = self.canonical_path(path)
+        if token_type == "color":
+            if p.startswith("text/") or "/text/" in p or p.startswith("label/") or "/label/" in p or "/on-" in p:
+                return ["TEXT_FILL"]
+            if p.startswith("border/") or "/border/" in p or p.startswith("outline/") or "/outline/" in p:
+                return ["STROKE"]
+            if p.startswith("icon/") or "/icon/" in p:
+                return ["SHAPE_FILL", "STROKE"]
+            if "/shadow/" in p and p.endswith("/color"):
+                return ["EFFECT_COLOR"]
+            return None
+        if token_type == "number":
+            if p.startswith("font/size/") or p.endswith("/fontSize") or "/fontSize/" in p:
+                return ["FONT_SIZE"]
+            if p.startswith("font/lineHeight/") or p.endswith("/lineHeight") or "/lineHeight/" in p:
+                return ["LINE_HEIGHT"]
+            if p.startswith("font/letterSpacing/") or p.endswith("/letterSpacing") or "/letterSpacing/" in p:
+                return ["LETTER_SPACING"]
+            return None
+        return None
+
     def verify_all_aliases(self):
         """Cross-collection verification gate. Now delegates to recursive walker."""
-        return self.verify_chain_completeness()
+        self.verify_chain_completeness()
+        self.verify_emitted_alias_targets()
+        self.verify_emitted_scope_families()
+        return True
 
 
 # ─── Standalone Helpers ────────────────────────────────────────────────────────
@@ -271,7 +403,7 @@ def prebuild_ids(gen, paths, ns):
     """
     id_map = {}
     for path in paths:
-        id_map[path.lower()] = gen.next_id(ns)
+        id_map[gen.canonical_path(path)] = gen.next_id(ns)
     return id_map
 
 
@@ -309,4 +441,3 @@ def make_family(gen, tree, family, shades, alpha_hex,
             scope=scope,
             hidden_from_publishing=hidden_from_publishing)
         gen.nest_token(tree, path, token)
-

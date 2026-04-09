@@ -51,6 +51,14 @@ The plugin's `autoScope` checkbox handles stripping scopes from `hiddenFromPubli
 
 Use this table. Never guess. If a path doesn't match, add it rather than defaulting to ALL_SCOPES.
 
+> [!IMPORTANT]
+> **Root-level path rule:** Many production token paths begin directly with semantic families such as `text/`, `border/`, `icon/`, `surface/`, `overlay/`, `font/`, `lineHeight`, `letterSpacing`, and `borderWidth`.
+> Your scope matcher must correctly recognize both:
+> - root-level forms like `text/primary`, `border/default`, `font/lineHeight/body`
+> - nested forms like `button/primary/text`, `feedback/error/border`, `interactive/primary/text`
+>
+> Do not rely only on substring checks like `"/text/"` or `"/border/"`, because those miss root-level semantic tokens and silently fall back to incorrect scopes.
+
 | Path contains | Type | Scope |
 |---|---|---|
 | `/background/`, `/surface/`, `/fill/`, `/container/`, `/scrim/`, `/overlay/` | color | `["FRAME_FILL", "SHAPE_FILL"]` |
@@ -99,6 +107,10 @@ def get_scope(path: str, token_type: str, is_primitive: bool = False) -> list:
     if token_type == "color":
         # Primitives: ALL_FILLS (raw colours usable anywhere)
         if is_primitive: return ["ALL_FILLS"]
+        if p.startswith("text/") or p.startswith("label/"): return ["TEXT_FILL"]
+        if p.startswith("border/") or p.startswith("outline/"): return ["STROKE"]
+        if p.startswith("icon/"): return ["SHAPE_FILL", "STROKE"]
+        if p.startswith("surface/") or p.startswith("background/") or p.startswith("overlay/"): return ["FRAME_FILL", "SHAPE_FILL"]
         if "/shadow/" in p and p.endswith("/color"): return ["EFFECT_COLOR"]
         if "/icon/" in p:                             return ["SHAPE_FILL", "STROKE"]
         if any(x in p for x in ["/text/", "/label/", "/on-"]): return ["TEXT_FILL"]
@@ -112,6 +124,10 @@ def get_scope(path: str, token_type: str, is_primitive: bool = False) -> list:
         if any(x in p for x in ["/shadow/blur", "/shadow/spread",
                                   "/shadow/offsetx", "/shadow/offsety"]):
             return ["EFFECT_FLOAT"]
+        if p.startswith("borderwidth/"): return ["STROKE_FLOAT"]
+        if p.startswith("font/size/"): return ["FONT_SIZE"]
+        if p.startswith("font/lineheight/"): return ["LINE_HEIGHT"]
+        if p.startswith("font/letterspacing/"): return ["LETTER_SPACING"]
         if "/blur/" in p or p.endswith("/blur"):  return ["EFFECT_FLOAT"]
         if "/opacity" in p:                        return ["OPACITY"]
         if any(x in p for x in ["/height/", "/width/", "/iconsize"]):

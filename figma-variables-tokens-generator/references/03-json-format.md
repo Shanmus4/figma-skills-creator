@@ -87,6 +87,22 @@
 - **String Tokens**: REQUIRE `"com.figma.type": "string"` at every Tier. Primitive String Tokens DO have scopes (FONT_FAMILY, FONT_STYLE).
 - **Figma Behavior**: Figma resolves the real data via `aliasData`. The `$value` exists for structural validity and safe fallback.
 
+## Canonical Path Identity (Critical)
+
+Figma alias resolution depends on exact path identity. A token is only safe when the following are identical representations of the same path:
+- the emitted JSON nesting path
+- the registry key
+- the `prebuild_ids()` key
+- the alias target path in `aliasData.targetVariableName`
+
+Therefore:
+- Do not emit mixed-case JSON paths while lowercasing alias targets
+- Do not rewrite semantic names such as `link-hover`, `on-brand`, `on-surface-variant`
+- Do not mutate `lineHeight`, `letterSpacing`, `borderWidth`, `minWidth`, or `maxWidth` mid-generation
+- Treat token paths as data identities, not as code formatting
+
+`com.figma.codeSyntax` may vary by platform. Token paths may not.
+
 ## Complete Alias Chain Samples
 
 Follow these full structural patterns. Each Tier aliases its **direct parent**.

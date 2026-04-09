@@ -32,6 +32,7 @@ Component → CC token → Semantic token → Primitive shade. Build those chain
 - aliasData JSON syntax (always from `03-json-format.md`)
 - hiddenFromPublishing per tier (always from `01-architecture.md`)
 - Token count minimums: Lean ≥55, Standard ≥80, Enterprise ≥120
+- Literal semantic path identities must remain stable across the whole chain (for example `link-hover`, `on-brand`, `on-surface-variant`, `lineHeight`, `letterSpacing`, `borderWidth`, `minWidth`, `maxWidth`)
 
 ---
 
@@ -93,6 +94,9 @@ The token groups below represent the **FLOOR** — the absolute minimum. The AI 
 ---
 
 ## Semantic Token Groups — Production-Grade Reference (~94 paths)
+
+> [!IMPORTANT]
+> Emit these semantic path names literally. Do not remove hyphens from semantic names and do not rewrite reference paths into a different spelling during generation, aliasing, or validation.
 
 ### surface group (12 tokens) → FRAME_FILL + SHAPE_FILL
 ```

@@ -11,6 +11,20 @@
 - **Platform Mapping (Q2 Logic)**: Map the selection to `platforms` list: `Web` or `Desktop` -> `["WEB"]`; `Mobile` -> `["ANDROID", "iOS"]`; `Web + Mobile` -> `["WEB", "ANDROID", "iOS"]`.
 - **Existing System Import (Q1 Context)**: If the user mentions they already have Figma variables during Q1 (brand/context), instruct them: *"Export your existing variables using the Variables Tokens Collections Importer plugin (Export tab). Upload the ZIP or provide the file path so I can analyze your current system and pre-fill the questionnaire."* Analyze the exported JSON for: token paths, naming conventions, tier structure, mode names, color palette. Pre-fill subsequent answers based on analysis.
 
+## Generation Safety Rules — Always In Force
+
+These rules are architecture-agnostic. They exist to prevent silent Figma import failures across all dynamic user inputs.
+
+- **Canonical path identity**: Every token path must be identical across planning, ID prebuilds, emitted JSON keys, registries, and `aliasData.targetVariableName`. Never emit one spelling and alias another.
+- **Do not mutate reference paths**: If a reference defines `link-hover`, `on-brand`, `on-surface-variant`, `lineHeight`, `letterSpacing`, `borderWidth`, `minWidth`, or `maxWidth`, preserve that exact spelling in the token path. Code syntax formatting is separate and must not rewrite token paths.
+- **Inventory first, adaptation second**: Build required path inventories from the references before adapting them to the user's brand, density, or component list. Do not manually improvise partial subsets for Standard or Enterprise systems.
+- **Artifact validation, not registry-only validation**: After generation, flatten the actual emitted JSON paths from every file and verify alias targets against those emitted paths. A registry-only pass is insufficient.
+- **Scope validation from the emitted artifact**: Confirm that emitted `text/*` paths use `TEXT_FILL`, `border/*` use `STROKE`, `icon/*` use `SHAPE_FILL` + `STROKE`, `shadow/*/color` use `EFFECT_COLOR`, and typography numeric paths use their correct numerical scopes. Never allow semantic text or border tokens to fall through to a generic fill fallback.
+- **Coverage floors are mandatory**: Lean, Standard, and Enterprise counts in the references are minimums, not suggestions. Do not proceed if the generated inventory undershoots the chosen density.
+- **Backfilling is not enough on its own**: Backfilling only solves missing parent values. It does not solve path identity mismatches, scope mistakes, or under-generated token inventories.
+- **Local workspace delivery rule**: In local IDE/CLI environments, create an `exports/` folder and write the final ZIP there. Do not leave the final deliverable in the project root.
+- **Minimal artifact rule**: Unless the user explicitly asks for diagnostics or code, do not emit extra manifests, helper JSON files, or generator scripts alongside the ZIP. The ZIP is the default deliverable.
+
 
 ### TURN 4 — Product Type + Colours (dropdowns)
 After the brand and context are resolved, show these four dropdowns together:
@@ -276,6 +290,22 @@ Python script BEFORE saving any collection. Think of it as: plan everything, the
 ### Final Gate
 After ALL collections are built → call `verify_chain_completeness()`.
 If it passes with zero broken links → the ZIP is safe to deliver.
+
+### Emitted Artifact Gate (Also Mandatory)
+
+After `verify_chain_completeness()`, run a second validation pass against the **actual emitted JSON files**:
+
+1. Flatten every emitted token path from `output_files`
+2. Verify that every `aliasData.targetVariableName` exists in the emitted path inventory for its target collection
+3. Verify that each emitted path spelling matches the intended canonical path exactly
+4. Verify critical scope families from the emitted files:
+   - `text/*` → `TEXT_FILL`
+   - `border/*` → `STROKE`
+   - `icon/*` → `SHAPE_FILL` + `STROKE`
+   - `shadow/*/color` → `EFFECT_COLOR`
+   - typography numbers → `FONT_SIZE`, `LINE_HEIGHT`, `LETTER_SPACING`
+
+If the emitted artifact disagrees with the internal registry, the ZIP is **not safe** even if the registry-based alias check passed.
 
 ---
 

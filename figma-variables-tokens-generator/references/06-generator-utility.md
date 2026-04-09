@@ -48,6 +48,19 @@ class DesignTokenGenerator:
             raise KeyError(f"PREBUILD MISS: Path '{key}' not found in ID map. Ensure it was added to prebuild_ids().")
         return id_map[key]
 
+    def canonical_path(self, path):
+        """
+        Single source of truth for path identity.
+        Use this SAME canonical form for:
+        - create_token(name)
+        - nest_token(path)
+        - prebuild_ids(paths)
+        - registry lookups
+        - aliasData.targetVariableName
+        Never emit one spelling and alias another.
+        """
+        return path.strip()
+
     def validate_responsive_coverage(self, resp_size, resp_lh, resp_ls):
         """Pre-flight audit for Responsive -> Primitive coverage."""
         missing = []
@@ -76,7 +89,7 @@ class DesignTokenGenerator:
             raise KeyError(f"SEMANTIC GAP: Component tokens alias non-existent Semantic paths. Fix before generating: {missing}")
 
     def create_token(self, name, ns, type, value=None, scope=None, alias_target=None, alias_set=None, vid=None, target_registry=None, hidden_from_publishing=False):
-        path = name.lower()
+        path = self.canonical_path(name)
         vid = vid or self.next_id(ns)
         self.token_registry[path] = vid
         
@@ -101,7 +114,7 @@ class DesignTokenGenerator:
             ext["com.figma.scopes"] = scope
             
         if alias_target:
-            target_path = alias_target.lower()
+            target_path = self.canonical_path(alias_target)
             # CRITICAL ALIAS RULE - Strip collection prefix from path for valid JSON
             known_sets = ["primitives/", "theme/", "responsive/", "density/", "layout/", "effects/", "typography/", "semantic/", "component colors/", "component dimensions/"]
             # Automatically add the target collection name to handle arbitrary custom collections
@@ -164,6 +177,7 @@ class DesignTokenGenerator:
         return p
 
     def nest_token(self, tree, path, token):
+        path = self.canonical_path(path)
         parts = path.split('/')
         curr = tree
         for part in parts[:-1]:
@@ -219,6 +233,20 @@ class DesignTokenGenerator:
     def verify_all_aliases(self):
         return self.verify_chain_completeness()
 ```
+
+### Mandatory Add-On: Emitted Artifact Validation
+
+Registry validation alone is not enough. A build can look valid internally while the emitted JSON still contains mismatched path spellings or wrong scopes.
+
+After `verify_chain_completeness()`:
+1. Flatten the actual emitted JSON paths from `output_files`
+2. Verify every alias target against the emitted path inventory for that collection
+3. Verify scope families from the emitted artifact:
+   - `text/*` → `TEXT_FILL`
+   - `border/*` → `STROKE`
+   - `icon/*` → `SHAPE_FILL` + `STROKE`
+   - `shadow/*/color` → `EFFECT_COLOR`
+4. Fail the build if emitted JSON identity differs from registry identity
 
 ## How to use in Generation Phase:
 

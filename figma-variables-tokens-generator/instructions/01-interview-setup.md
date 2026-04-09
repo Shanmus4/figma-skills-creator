@@ -50,11 +50,13 @@ Ask using `ask_user_input` (single_select):
 - `No — starting from scratch`
 
 **If YES:** Give these exact export instructions:
-> To export your variables from Figma:
-> 1. Open your Figma file → open the **Local Variables** panel
-> 2. **Right-click on each collection** → select **"Export variables"**
-> 3. **Rename each file** so it's clear what it contains (e.g. `my-primitives.json`)
-> 4. Share all the renamed files here
+> To export your variables from Figma, use the **Variables Tokens Collections Importer** plugin:
+> 1. Install or open the plugin: https://www.figma.com/community/plugin/1619733963699677957
+> 2. In the plugin, open the **Export** tab
+> 3. Export your current variables as a ZIP
+> 4. Share the ZIP here, or provide the exported file path
+>
+> This is the preferred export path because it preserves the real collection structure, modes, and metadata more reliably than manual collection-by-collection export.
 
 *Wait for the user to upload the files. Once received, analyse them to learn their conventions.*
 

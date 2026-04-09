@@ -84,6 +84,60 @@
           "description": "A token count table is delivered after the ZIP"
         }
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "I already have variables in Figma and want the AI to analyze them before generating updates.",
+      "expected_output": "Turn 1 instructs the user to export existing variables using the Variables Tokens Collections Importer plugin Export tab and share the ZIP or file path. It does not instruct the user to manually right-click collections and export them one by one.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-plugin-export-flow-in-turn-1",
+          "description": "Turn 1 explicitly points the user to the Variables Tokens Collections Importer plugin Export tab"
+        },
+        {
+          "name": "does-not-use-manual-right-click-export-flow",
+          "description": "Turn 1 does not instruct the user to right-click each Figma collection and export variables manually"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Generate a complex 4-tier token package locally in a coding workspace.",
+      "expected_output": "When operating in a local IDE or CLI workspace, the final deliverable is a ZIP inside an exports folder. The skill does not scatter helper manifests or debug artifacts in the project root unless explicitly requested.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "writes-final-zip-to-exports-folder",
+          "description": "Local workspace output goes to an exports folder, not the project root"
+        },
+        {
+          "name": "avoids-extra-artifacts-by-default",
+          "description": "The default deliverable is the ZIP only; manifests/debug files are not emitted unless explicitly requested"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Build an enterprise token system with semantic text, borders, typography, and custom collections.",
+      "expected_output": "The generated artifact preserves literal token path identities from the references, validates alias targets against emitted JSON paths, and applies correct scopes to emitted semantic tokens. Text paths resolve to TEXT_FILL, border paths to STROKE, icon paths to SHAPE_FILL plus STROKE, and typography numeric paths to FONT_SIZE, LINE_HEIGHT, and LETTER_SPACING.",
+      "files": [
+        "scripts/validate_generator_core.py"
+      ],
+      "assertions": [
+        {
+          "name": "preserves-literal-path-identity",
+          "description": "Reference paths such as link-hover, on-brand, on-surface-variant, lineHeight, letterSpacing, borderWidth, minWidth, and maxWidth are preserved without mutation"
+        },
+        {
+          "name": "validates-emitted-artifact-not-just-registry",
+          "description": "Alias validation checks emitted JSON paths, not only internal registry keys"
+        },
+        {
+          "name": "semantic-scope-families-correct",
+          "description": "Semantic text, border, icon, shadow color, and typography numeric scope families are emitted with their correct Figma scopes"
+        }
+      ]
     }
   ]
 }

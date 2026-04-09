@@ -30,6 +30,17 @@ This plugin is designed to work seamlessly with the **Figma Variable Creator** A
 2. Ask the skill to "Export as Token Porter ZIP".
 3. Drop the resulting ZIP here.
 
+If you already have variables in Figma:
+1. Use the plugin's **Export** flow to export your existing variables as a ZIP
+2. Share that ZIP with the AI so it can analyze your current structure before generating updates
+
+If the plugin reports import errors:
+1. Copy the error output
+2. Paste it back to the AI
+3. Ask it to fix the token package and regenerate the ZIP
+
+If you need changes later, ask the AI to update the tokens and re-import the new ZIP. The plugin can synchronize over an existing design system.
+
 ## Deployment & Support
 
 - **Contact**: [s4.shanmugsundar@gmail.com](mailto:s4.shanmugsundar@gmail.com)
