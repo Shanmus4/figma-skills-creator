@@ -380,6 +380,7 @@ Follow this exact pattern for every generation turn. Do NOT deviate:
 > 5. **Font Choices**: Pass user's font selections to `build_primitives()` and `build_typography()`.
 > 6. **Naming Collision Check**: No path can be both a token ($value) and a group (children). Fix: move base value to `/default`.
 > 7. **TOKEN COUNTING RULE**: Count unique token PATHS, not mode instances. A Semantic token with light + dark modes is **1 token**, not 2.
+> 8. **Custom Typography & Scaling**: If you define completely custom roles (e.g. `man-lg`) in `build_typography`, you **MUST** also inject those specific size primitives into the system using `gen.build_responsive(extra_size_map={"man-lg": ...})`. If you do not map the underlying base primitives, the alias validation gate will block the run.
 
 **Output constraint:** Output only valid `.zip` files containing the structured JSON. Do not output `.skill` files or dump raw scripts.
 
