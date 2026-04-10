@@ -234,21 +234,13 @@ CC split:      {split / flat / N/A}
 High contrast: {yes/no}
 ```
 
-**AUTONOMOUS PATH SELECTION (MANDATORY):**
-You (the AI) must choose the safest generation path independently. Do NOT ask the user to choose between Path 1 and Path 2. 
+**AUTONOMOUS PATH SELECTION:**
+Since the `generator_core.py` SDK has been upgraded internally to handle complexity automatically, you only need to confirm the user wants to proceed.
 
-1.  **Evaluate Complexity**: Based on the confirmed architecture (Tiers, collections, modes), calculate if a single-shot generation is safe.
-2.  **Declare your choice**: Tell the user: *"Based on the architecture complexity, I have chosen [Path 1: One-Shot / Path 2: Phased] to ensure maximum precision and zero timeouts."*
-3.  **Final Confirmation**:
+1.  **Final Confirmation**:
     Ask using `ask_user_input` (single_select): *"Should I proceed with the generation as described above?"*
     - `Yes — generate everything`
     - `Change something first (e.g., architecture, naming, syntax)`
-
-**Path 1: One-Shot Generation**
-- Decide this if: You calculate that you can comfortably generate all JSON structures for the requested architecture in a single output window without hitting a timeout or trailing off.
-
-**Path 2: Phased Generation**
-- Decide this if: You calculate the architecture is massive (e.g. 4-Tier, or many dense optional collections) and poses a high risk of an output timeout or incomplete JSON generation. Tell the user: *"To ensure absolute precision and prevent timeouts while calculating this massive architecture, I will break this into three background phases (Turns A, B, and C). You will only need to type 'Next' when prompted. I will provide ONE combined final ZIP file at the very end."*
 
 **Do not generate a single token until the user confirms "Yes — generate everything".**
 
@@ -362,15 +354,13 @@ Follow this exact pattern for every generation turn. Do NOT deviate:
     - **A. Shared Utility**: Write `generator_core.py` from `scripts/generator_core.py` (or confirm it exists from a previous run).
     - **B. Brand Data**: Inside `gen_all.py`, define your brand color hex codes as shade lists.
     - **C. Builder Calls**: Call `build_*()` methods for standard collections. Use `create_token()` only for custom collections.
-    - **D. Persistence (FAIL-SAFE)**: Do NOT pickle the `gen` object directly. Use `pickle.dump(gen.to_dict(), f)` to save state as a plain dictionary.
-    - **Zero narration during generation**: Do not explain the output or summarize what was generated. Deliver the ZIP widget, then proceed to Turn D (token count table).
+    - **Zero narration during generation**: Do not explain the output or summarize what was generated. Deliver the ZIP archive, then proceed to the token count table.
 
 > **Performance & Stability Guardrails**
-> 1. **Default to Single-Script Generation**: Always write all generation phases in a **single `gen_all.py`** script. Only split if context truncation is a critical risk.
-> 2. **No Cross-Script Pickle of Class Instances**: Never pickle a `DesignTokenGenerator` instance across different scripts. Use `to_dict()` / `from_dict()` if splitting is unavoidable.
+> 1. **Single-Script Generation Is Mandatory**: Always write all generation code in a **single `gen_all.py`** script and execute it once.
+> 2. **NO PICKLE / STATE SAVING**: Never try to chunk the generation, save state, or use `pickle`. The Builder API is concise enough (40-80 lines) to execute the entire system safely in one go.
 > 3. **Use Builder Methods**: For ALL standard collections, use `build_*()` methods from `references/06-generator-utility.md`. Only use `create_token()` for custom collections (Q11).
 > 4. **Resumption Rule**: If interrupted (Continue button), pick up immediately from where you left off.
-> 5. **Script Conciseness**: A complete 3-Tier system should be ~40-80 lines of `gen_all.py`.
 
 > **What the SDK Handles Automatically** — You do NOT need to manually manage these:
 > 1. **Scoping**: Auto-derived from path + type via `get_scope()`. Override with explicit `scope=` only for unusual custom tokens.
@@ -449,52 +439,10 @@ gen.build_zip(output_dir="../export")
 
 ---
 
-### PATH 1: ONE-SHOT GENERATION
-*(Execute immediately after user confirms "Yes", skipping Turns A/B/C)*
-Generate all collections using builder methods in a single `gen_all.py`. Output **ONE `.zip` widget**. Then jump to **Turn D (Token count reporting)**.
-
----
-
-### PATH 2: PHASED GENERATION 
-*(Execute if complexity requires chunking)*
-
-### TURN A — Core Foundations
-Write `gen_all.py` with:
-1. **`build_primitives()`**: Brand colors from Q3 + grey family from Q4 + font families from Q5. All scales (spacing, radius, etc.) are auto-included.
-2. **Mode-switching collection (TIER-DEPENDENT):**
-   - **2-Tier / 3-Tier →** `build_semantic(brand="...", grey="...")`
-   - **4-Tier →** `build_theme(brand="...", grey="...")`
-
-*Stop. Tell user: "Turn A complete. Type **Next** for structural collections."*
-
----
-
-### TURN B — Structural Collections
-*(Wait for user to type "Next")*
-
-Add to `gen_all.py`:
-1. `gen.build_responsive()`
-2. `gen.build_density()`
-3. `gen.build_layout()`
-4. `gen.build_effects()`
-
-*Stop. Tell user: "Turn B complete. Type **Next** for components and ZIP."*
-
----
-
-### TURN C — Components & Final Compilation
-*(Wait for user to type "Next")*
-
-Add to `gen_all.py`:
-1. `gen.build_typography(body_font="...", display_font="...", mono_font="...")`
-2. **4-Tier ONLY:** `gen.build_semantic(brand="...", grey="...")` (single mode, aliases Theme)
-3. `gen.build_component_colors(components=[...])` — Use component list from Q9
-4. `gen.build_component_dimensions()`
-5. Any **Custom Collections (Q11)** using manual `create_token()` calls
-6. `gen.verify_all_aliases()`
-7. `gen.build_zip(output_dir="exports")`
-
-Output **ONE SINGLE `.zip` WIDGET** containing everything. *Automatically proceed to Turn D.*
+### GENERATION (SINGLE SHOT)
+*(Execute immediately after user confirms "Yes")*
+Generate all collections using builder methods in a single `gen_all.py` script. Run the script to produce **ONE `.zip` archive**.
+Then jump to **Token count reporting**.
 
 ---
 
