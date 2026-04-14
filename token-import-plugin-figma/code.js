@@ -20,7 +20,7 @@ figma.showUI(__html__, { width: 420, height: 600, themeColors: true })
 figma.ui.onmessage = async (msg) => {
   switch (msg.type) {
     case 'CHECK_CONFLICTS': await checkConflicts(msg.collections); break
-    case 'IMPORT':          await handleImport(msg.collections, msg.strategy, msg.autoScope); break
+    case 'IMPORT':          await handleImport(msg.collections, msg.strategy, msg.autoScope, msg.generateStyles); break
     case 'EXPORT':          await handleExport(); break
     case 'GET_COLLECTIONS': await sendCollectionsList(); break
   }
@@ -148,7 +148,7 @@ function isBetterEqual(localValue, incomingToken, type, varNameById, varCollById
 
 // ─── IMPORT ───────────────────────────────────────────────────────────────────
 
-async function handleImport(collections, strategy = 'CREATE', autoScope = true) {
+async function handleImport(collections, strategy = 'CREATE', autoScope = true, generateStyles = true) {
   const localCollections = await figma.variables.getLocalVariableCollectionsAsync()
   const results      = []  // per-collection summary
   const pendingAliases = [] // resolved after all variables exist
@@ -375,16 +375,452 @@ async function handleImport(collections, strategy = 'CREATE', autoScope = true) 
       })
     }
 
+    // ── Style Generation Phase ──
+    let styleResults = { text: 0, effect: 0, grid: 0, errors: [] }
+    if (generateStyles) {
+      try {
+        styleResults = await generateStylesFromVariables(variableMap)
+      } catch (e) {
+        styleResults.errors.push(`Style generation failed: ${e.message}`)
+        console.error('[STYLES] Generation error:', e)
+      }
+    }
+
     figma.ui.postMessage({ type: 'IMPORT_COMPLETE', results: Object.entries(collectionStats).map(([name, stats]) => ({
       name,
       successCount: stats.success.size,
       totalCount: stats.total,
       errors: stats.errors
-    })) })
+    })), styleResults })
 
   } catch (e) {
     figma.ui.postMessage({ type: 'IMPORT_ERROR', message: e.message })
   }
+}
+
+// ─── STYLE GENERATION ─────────────────────────────────────────────────────────
+
+async function generateStylesFromVariables(variableMap) {
+  const results = { text: 0, effect: 0, grid: 0, errors: [] }
+
+  // Get all existing local styles to avoid duplicates
+  const existingTextStyles = await figma.getLocalTextStylesAsync()
+  const existingEffectStyles = await figma.getLocalEffectStylesAsync()
+  const existingGridStyles = await figma.getLocalGridStylesAsync()
+
+  const existingTextNames = new Set(existingTextStyles.map(s => s.name))
+  const existingEffectNames = new Set(existingEffectStyles.map(s => s.name))
+  const existingGridNames = new Set(existingGridStyles.map(s => s.name))
+
+  // Typography
+  try {
+    results.text = await generateTextStyles(variableMap, existingTextNames)
+  } catch (e) {
+    results.errors.push(`Text styles: ${e.message}`)
+    console.error('[STYLES] Text style error:', e)
+  }
+
+  // Effects
+  try {
+    results.effect = await generateEffectStyles(variableMap, existingEffectNames)
+  } catch (e) {
+    results.errors.push(`Effect styles: ${e.message}`)
+    console.error('[STYLES] Effect style error:', e)
+  }
+
+  // Layout / Grid
+  try {
+    results.grid = await generateGridStyles(variableMap, existingGridNames)
+  } catch (e) {
+    results.errors.push(`Grid styles: ${e.message}`)
+    console.error('[STYLES] Grid style error:', e)
+  }
+
+  console.log(`[STYLES] Created: ${results.text} text, ${results.effect} effect, ${results.grid} grid styles`)
+  return results
+}
+
+function capitalizeStyleName(raw) {
+  // "hugedisplay" -> "Hugedisplay", "shadow/sm" -> "Shadow/Sm"
+  return raw.split('/').map(seg => seg.charAt(0).toUpperCase() + seg.slice(1)).join('/')
+}
+
+function buildTextStyleName(groupName, allGroupNames) {
+  // Always group text styles: Groupname/leaf-name
+  // Group name: first letter caps. Leaf name: lowercase with dashes.
+  // e.g. buttonsm -> Button/button-sm, display -> Display/display
+  // e.g. caption1 -> Caption/caption-1, title2 -> Title/title-2
+  const SIZE_SUFFIXES = ['xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl', '2xl', '3xl', '4xl', '5xl']
+
+  let base = null, suffix = null
+
+  // Check for size suffix
+  for (const sz of SIZE_SUFFIXES) {
+    if (groupName.length > sz.length && groupName.endsWith(sz)) {
+      base = groupName.slice(0, -sz.length)
+      suffix = sz
+      break
+    }
+  }
+
+  // Check for trailing digits (e.g. body1, title2, heading3)
+  if (!base) {
+    const digitMatch = groupName.match(/^(.+?)(\d+)$/)
+    if (digitMatch) {
+      base = digitMatch[1]
+      suffix = digitMatch[2]
+    }
+  }
+
+  if (base && suffix) {
+    // Has a detectable suffix - check if others share this base
+    const hasRelative = allGroupNames.some(other => {
+      if (other === groupName) return false
+      return other.startsWith(base) && other.length > base.length
+    })
+    if (hasRelative) {
+      // Group with shared base: Button/button-sm
+      return capitalizeStyleName(base) + '/' + base + '-' + suffix
+    }
+  }
+
+  // Either no suffix or no relatives - still create a group with same name
+  // Display/display, Code/code, Headline/headline
+  return capitalizeStyleName(groupName) + '/' + groupName
+}
+
+function parseFirstFontFamily(cssStack) {
+  // Extract first font name from CSS font-family stack
+  // "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, ..." -> tries each until found
+  if (!cssStack) return null
+  const candidates = cssStack.split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''))
+  // Filter out CSS keywords / system fonts that Figma won't have
+  const skip = new Set(['-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy'])
+  for (const c of candidates) {
+    if (!skip.has(c) && c.length > 0) return c
+  }
+  return candidates[0] || null
+}
+
+function mapWeightToFigmaStyle(weight) {
+  // Map common weight strings to Figma font style names
+  if (!weight) return 'Regular'
+  const w = weight.trim()
+  const map = {
+    'thin': 'Thin', '100': 'Thin',
+    'extralight': 'ExtraLight', 'ultralight': 'ExtraLight', '200': 'ExtraLight',
+    'light': 'Light', '300': 'Light',
+    'regular': 'Regular', 'normal': 'Regular', '400': 'Regular',
+    'medium': 'Medium', '500': 'Medium',
+    'semibold': 'SemiBold', 'demibold': 'SemiBold', '600': 'SemiBold',
+    'bold': 'Bold', '700': 'Bold',
+    'extrabold': 'ExtraBold', 'ultrabold': 'ExtraBold', '800': 'ExtraBold',
+    'black': 'Black', 'heavy': 'Black', '900': 'Black'
+  }
+  return map[w.toLowerCase()] || w
+}
+
+async function generateTextStyles(variableMap, existingNames) {
+  // Group Typography variables: Typography/display/fontsize -> group "display", prop "fontsize"
+  const groups = {}
+  const TYPO_PROPS = new Set(['fontsize', 'lineheight', 'letterspacing', 'fontfamily', 'fontweight'])
+
+  for (const key of Object.keys(variableMap)) {
+    if (!key.startsWith('Typography/')) continue
+    const rest = key.slice('Typography/'.length) // e.g. "display/fontsize"
+    const parts = rest.split('/')
+    if (parts.length < 2) continue
+    const prop = parts[parts.length - 1]
+    if (!TYPO_PROPS.has(prop)) continue
+    const groupName = parts.slice(0, -1).join('/') // supports nested like "display" or "button/lg"
+    if (!groups[groupName]) groups[groupName] = {}
+    groups[groupName][prop] = variableMap[key]
+  }
+
+  let count = 0
+  for (const [groupName, props] of Object.entries(groups)) {
+    // Must have at least fontsize to be a valid text style
+    if (!props.fontsize) continue
+
+    const styleName = buildTextStyleName(groupName, Object.keys(groups))
+    if (existingNames.has(styleName)) {
+      console.log(`[STYLES] Skipping existing text style: ${styleName}`)
+      continue
+    }
+
+    try {
+      // Read raw values from variables to set initial static properties
+      const fsVar = await figma.variables.getVariableByIdAsync(props.fontsize)
+      const lhVar = props.lineheight ? await figma.variables.getVariableByIdAsync(props.lineheight) : null
+      const lsVar = props.letterspacing ? await figma.variables.getVariableByIdAsync(props.letterspacing) : null
+      const ffVar = props.fontfamily ? await figma.variables.getVariableByIdAsync(props.fontfamily) : null
+      const fwVar = props.fontweight ? await figma.variables.getVariableByIdAsync(props.fontweight) : null
+
+      if (!fsVar) continue
+
+      // Resolve values (follows alias chains to get the actual raw value)
+      const fsVal = await resolveVariableValue(fsVar)
+      const lhVal = lhVar ? await resolveVariableValue(lhVar) : null
+      const lsVal = lsVar ? await resolveVariableValue(lsVar) : null
+      const ffVal = ffVar ? await resolveVariableValue(ffVar) : null
+      const fwVal = fwVar ? await resolveVariableValue(fwVar) : null
+
+      // Determine font to load
+      const familyName = ffVal ? parseFirstFontFamily(String(ffVal)) : null
+      const styleSuffix = fwVal ? mapWeightToFigmaStyle(String(fwVal)) : 'Regular'
+
+      const textStyle = figma.createTextStyle()
+      textStyle.name = styleName
+
+      // Load and set font - must match the resolved variable values for binding to stick
+      const fontToLoad = { family: familyName || 'Inter', style: styleSuffix }
+      try {
+        await figma.loadFontAsync(fontToLoad)
+        textStyle.fontName = fontToLoad
+      } catch (fontErr) {
+        // Fallback: try family with Regular, then Inter Regular
+        try {
+          const fallback1 = { family: familyName || 'Inter', style: 'Regular' }
+          await figma.loadFontAsync(fallback1)
+          textStyle.fontName = fallback1
+        } catch (e2) {
+          try {
+            await figma.loadFontAsync({ family: 'Inter', style: 'Regular' })
+            textStyle.fontName = { family: 'Inter', style: 'Regular' }
+          } catch (e3) {
+            await figma.loadFontAsync({ family: 'Roboto', style: 'Regular' })
+          }
+        }
+      }
+
+      // Set static values
+      if (typeof fsVal === 'number') textStyle.fontSize = fsVal
+      if (typeof lhVal === 'number') textStyle.lineHeight = { value: lhVal, unit: 'PIXELS' }
+      if (typeof lsVal === 'number') textStyle.letterSpacing = { value: lsVal, unit: 'PIXELS' }
+
+      // Bind variables
+      try { textStyle.setBoundVariable('fontSize', fsVar) } catch (e) { console.warn(`[STYLES] Could not bind fontSize for ${styleName}: ${e.message}`) }
+      if (lhVar) try { textStyle.setBoundVariable('lineHeight', lhVar) } catch (e) { console.warn(`[STYLES] Could not bind lineHeight for ${styleName}: ${e.message}`) }
+      if (lsVar) try { textStyle.setBoundVariable('letterSpacing', lsVar) } catch (e) { console.warn(`[STYLES] Could not bind letterSpacing for ${styleName}: ${e.message}`) }
+      if (ffVar) try { textStyle.setBoundVariable('fontFamily', ffVar) } catch (e) { console.warn(`[STYLES] Could not bind fontFamily for ${styleName}: ${e.message}`) }
+      if (fwVar) try { textStyle.setBoundVariable('fontStyle', fwVar) } catch (e) { console.warn(`[STYLES] Could not bind fontStyle for ${styleName}: ${e.message}`) }
+
+      count++
+    } catch (e) {
+      console.error(`[STYLES] Failed to create text style "${styleName}": ${e.message}`)
+    }
+  }
+  return count
+}
+
+async function generateEffectStyles(variableMap, existingNames) {
+  let count = 0
+
+  // ── Shadow Styles ──
+  // Group: Effects/shadow/sm/color, Effects/shadow/sm/x, etc.
+  const shadowGroups = {}
+  const SHADOW_PROPS = new Set(['color', 'x', 'y', 'blur', 'spread'])
+
+  for (const key of Object.keys(variableMap)) {
+    if (!key.startsWith('Effects/shadow/')) continue
+    const rest = key.slice('Effects/shadow/'.length) // e.g. "sm/color"
+    const parts = rest.split('/')
+    if (parts.length < 2) continue
+    const prop = parts[parts.length - 1]
+    if (!SHADOW_PROPS.has(prop)) continue
+    const sizeName = parts.slice(0, -1).join('/') // "sm"
+    if (!shadowGroups[sizeName]) shadowGroups[sizeName] = {}
+    shadowGroups[sizeName][prop] = variableMap[key]
+  }
+
+  for (const [sizeName, props] of Object.entries(shadowGroups)) {
+    const styleName = `Shadow/shadow-${sizeName}`
+    if (existingNames.has(styleName)) {
+      console.log(`[STYLES] Skipping existing effect style: ${styleName}`)
+      continue
+    }
+
+    try {
+      // Read raw values
+      const colorVar = props.color ? await figma.variables.getVariableByIdAsync(props.color) : null
+      const xVar = props.x ? await figma.variables.getVariableByIdAsync(props.x) : null
+      const yVar = props.y ? await figma.variables.getVariableByIdAsync(props.y) : null
+      const blurVar = props.blur ? await figma.variables.getVariableByIdAsync(props.blur) : null
+      const spreadVar = props.spread ? await figma.variables.getVariableByIdAsync(props.spread) : null
+
+      const colorVal = colorVar ? await resolveVariableValue(colorVar) : null
+      const xVal = xVar ? await resolveVariableValue(xVar) : 0
+      const yVal = yVar ? await resolveVariableValue(yVar) : 0
+      const blurVal = blurVar ? await resolveVariableValue(blurVar) : 0
+      const spreadVal = spreadVar ? await resolveVariableValue(spreadVar) : 0
+
+      // Build shadow color - handle alias (value might be an alias object)
+      let shadowColor = { r: 0, g: 0, b: 0, a: 0.25 }
+      if (colorVal && typeof colorVal === 'object') {
+        if (colorVal.r !== undefined) {
+          shadowColor = { r: colorVal.r, g: colorVal.g, b: colorVal.b, a: colorVal.a !== undefined ? colorVal.a : 0.25 }
+        }
+      }
+
+      // Build the initial DROP_SHADOW effect
+      let effect = {
+        type: 'DROP_SHADOW',
+        color: shadowColor,
+        offset: { x: typeof xVal === 'number' ? xVal : 0, y: typeof yVal === 'number' ? yVal : 0 },
+        radius: typeof blurVal === 'number' ? blurVal : 0,
+        spread: typeof spreadVal === 'number' ? spreadVal : 0,
+        visible: true,
+        blendMode: 'NORMAL'
+      }
+
+      // Bind variables to the effect using setBoundVariableForEffect
+      if (colorVar) try { effect = figma.variables.setBoundVariableForEffect(effect, 'color', colorVar) } catch (e) { console.warn(`[STYLES] Bind shadow color: ${e.message}`) }
+      if (xVar) try { effect = figma.variables.setBoundVariableForEffect(effect, 'offsetX', xVar) } catch (e) { console.warn(`[STYLES] Bind shadow x: ${e.message}`) }
+      if (yVar) try { effect = figma.variables.setBoundVariableForEffect(effect, 'offsetY', yVar) } catch (e) { console.warn(`[STYLES] Bind shadow y: ${e.message}`) }
+      if (blurVar) try { effect = figma.variables.setBoundVariableForEffect(effect, 'radius', blurVar) } catch (e) { console.warn(`[STYLES] Bind shadow blur: ${e.message}`) }
+      if (spreadVar) try { effect = figma.variables.setBoundVariableForEffect(effect, 'spread', spreadVar) } catch (e) { console.warn(`[STYLES] Bind shadow spread: ${e.message}`) }
+
+      const effectStyle = figma.createEffectStyle()
+      effectStyle.name = styleName
+      effectStyle.effects = [effect]
+      count++
+    } catch (e) {
+      console.error(`[STYLES] Failed to create shadow style "${styleName}": ${e.message}`)
+    }
+  }
+
+  // ── Blur Styles ──
+  // Group: Effects/blur/sm, Effects/blur/md, etc. (single values, not nested)
+  for (const key of Object.keys(variableMap)) {
+    if (!key.startsWith('Effects/blur/')) continue
+    const rest = key.slice('Effects/blur/'.length) // e.g. "sm"
+    if (rest.includes('/')) continue // skip if it's deeper nested
+
+    const styleName = `Blur/blur-${rest}`
+    if (existingNames.has(styleName)) {
+      console.log(`[STYLES] Skipping existing blur style: ${styleName}`)
+      continue
+    }
+
+    try {
+      const blurVar = await figma.variables.getVariableByIdAsync(variableMap[key])
+      if (!blurVar) continue
+      const blurVal = await resolveVariableValue(blurVar)
+
+      let effect = {
+        type: 'LAYER_BLUR',
+        radius: typeof blurVal === 'number' ? blurVal : 0,
+        visible: true
+      }
+
+      try { effect = figma.variables.setBoundVariableForEffect(effect, 'radius', blurVar) } catch (e) { console.warn(`[STYLES] Bind blur radius: ${e.message}`) }
+
+      const effectStyle = figma.createEffectStyle()
+      effectStyle.name = styleName
+      effectStyle.effects = [effect]
+      count++
+    } catch (e) {
+      console.error(`[STYLES] Failed to create blur style "${styleName}": ${e.message}`)
+    }
+  }
+
+  return count
+}
+
+async function generateGridStyles(variableMap, existingNames) {
+  let count = 0
+
+  // Find the Layout collection to get modes
+  const localCollections = await figma.variables.getLocalVariableCollectionsAsync()
+  const layoutColl = localCollections.find(c => c.name === 'Layout')
+  if (!layoutColl) return 0
+
+  // Token paths in Layout: column/count, column/margin, column/gutter
+  const countVarId = variableMap['Layout/column/count']
+  const marginVarId = variableMap['Layout/column/margin']
+  const gutterVarId = variableMap['Layout/column/gutter']
+
+  if (!countVarId && !marginVarId && !gutterVarId) return 0
+
+  const countVar = countVarId ? await figma.variables.getVariableByIdAsync(countVarId) : null
+  const marginVar = marginVarId ? await figma.variables.getVariableByIdAsync(marginVarId) : null
+  const gutterVar = gutterVarId ? await figma.variables.getVariableByIdAsync(gutterVarId) : null
+
+  // Create one grid style per mode with resolved values
+  for (const mode of layoutColl.modes) {
+    const styleName = `Layout/layout-${mode.name}`
+    if (existingNames.has(styleName)) {
+      console.log(`[STYLES] Skipping existing grid style: ${styleName}`)
+      continue
+    }
+
+    try {
+      // Resolve values for this mode (follow alias chains to raw numbers)
+      const resolvedCount = countVar ? (await resolveVariableValueForMode(countVar, mode.modeId) || 12) : 12
+      const resolvedMargin = marginVar ? (await resolveVariableValueForMode(marginVar, mode.modeId) || 0) : 0
+      const resolvedGutter = gutterVar ? (await resolveVariableValueForMode(gutterVar, mode.modeId) || 20) : 20
+
+      const gridStyle = figma.createGridStyle()
+      gridStyle.name = styleName
+
+      // Create base grid object
+      let layoutGrid = {
+        pattern: 'COLUMNS',
+        alignment: 'STRETCH',
+        gutterSize: typeof resolvedGutter === 'number' ? resolvedGutter : 20,
+        count: typeof resolvedCount === 'number' ? resolvedCount : 12,
+        offset: typeof resolvedMargin === 'number' ? resolvedMargin : 0
+      }
+
+      // Bind variables using the layout grid helper
+      if (countVar) try { layoutGrid = figma.variables.setBoundVariableForLayoutGrid(layoutGrid, 'count', countVar) } catch (e) { console.warn(`[STYLES] Bind grid count: ${e.message}`) }
+      if (gutterVar) try { layoutGrid = figma.variables.setBoundVariableForLayoutGrid(layoutGrid, 'gutterSize', gutterVar) } catch (e) { console.warn(`[STYLES] Bind grid gutter: ${e.message}`) }
+      if (marginVar) try { layoutGrid = figma.variables.setBoundVariableForLayoutGrid(layoutGrid, 'offset', marginVar) } catch (e) { console.warn(`[STYLES] Bind grid margin: ${e.message}`) }
+
+      gridStyle.layoutGrids = [layoutGrid]
+
+      count++
+    } catch (e) {
+      console.error(`[STYLES] Failed to create grid style "${styleName}": ${e.message}`)
+    }
+  }
+
+  return count
+}
+
+async function resolveVariableValue(variable) {
+  // Follows alias chains to get the actual raw value from a variable's first mode
+  if (!variable || !variable.valuesByMode) return null
+  const modes = Object.keys(variable.valuesByMode)
+  if (modes.length === 0) return null
+  return await resolveVariableValueForMode(variable, modes[0])
+}
+
+async function resolveVariableValueForMode(variable, modeId) {
+  // Follows alias chains to get the actual raw value for a specific mode
+  if (!variable || !variable.valuesByMode) return null
+  let val = variable.valuesByMode[modeId]
+  if (val === undefined) {
+    // Fallback to first available mode
+    const modes = Object.keys(variable.valuesByMode)
+    if (modes.length === 0) return null
+    val = variable.valuesByMode[modes[0]]
+  }
+
+  // Follow alias chain (max 10 hops to prevent infinite loops)
+  let hops = 0
+  while (val && typeof val === 'object' && val.type === 'VARIABLE_ALIAS' && hops < 10) {
+    const target = await figma.variables.getVariableByIdAsync(val.id)
+    if (!target || !target.valuesByMode) return null
+    const targetModes = Object.keys(target.valuesByMode)
+    if (targetModes.length === 0) return null
+    val = target.valuesByMode[targetModes[0]]
+    hops++
+  }
+
+  // If still an alias after 10 hops, give up
+  if (val && typeof val === 'object' && val.type === 'VARIABLE_ALIAS') return null
+  return val
 }
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────

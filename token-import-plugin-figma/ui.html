@@ -311,6 +311,14 @@
                     </div>
                 </label>
 
+                <label id="gen-styles-container" style="display:none; align-items:flex-start; font-family:var(--font-main); font-size:10px; cursor:pointer; gap:8px;">
+                    <input type="checkbox" id="gen-styles-checkbox" checked style="margin-top:2px; accent-color:#000;">
+                    <div>
+                        <div style="font-weight:700;">Create styles from variables (Text, Effects, Grids)</div>
+                        <div style="color:var(--text-muted); font-size:9px; margin-top:2px; line-height:1.3;">Auto-generates bound Figma styles from Typography, Effects, and Layout tokens.</div>
+                    </div>
+                </label>
+
                 <div id="progress" style="display:none; flex-direction:column; gap:8px;">
                     <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; text-transform:uppercase;">Status: Processing...</div>
                     <div style="width:100%; height:8px; border:1px solid #000; background:#eee;">
@@ -343,11 +351,22 @@
                 <div id="results" style="display:none;">
                     <div class="process-list">
                         <div class="process-header">
-                            <div>Target</div>
-                            <div>Payload</div>
+                            <div>Collection</div>
+                            <div>Success/Total</div>
                             <div style="text-align:right;">State</div>
                         </div>
                         <div id="result-list"></div>
+                    </div>
+
+                    <div id="style-results" style="display:none; margin-top:16px;">
+                        <div class="process-list">
+                            <div class="process-header" style="background:var(--tag-blue);">
+                                <div>Style Type</div>
+                                <div>Created</div>
+                                <div style="text-align:right;">State</div>
+                            </div>
+                            <div id="style-result-list"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -373,7 +392,7 @@
                     <a href="https://github.com/Shanmus4/figma-variables-tokens-generator" target="_blank" class="footer-link">Docs</a>
                     <div class="footer-link" onclick="toggleContact(true)">Contact</div>
                 </div>
-                <div class="v-stable">V2.0_STABLE</div>
+                <div class="v-stable">V3.0_STABLE</div>
             </div>
             <div class="copyright-row">
                 © 2026 SHANMU_S4. MIT LICENSE.
@@ -464,6 +483,7 @@ async function handleFile(file) {
         document.getElementById('file-name').innerText = file.name.toUpperCase();
         document.getElementById('file-chosen').style.display = 'flex';
         document.getElementById('auto-scope-container').style.display = 'flex';
+        document.getElementById('gen-styles-container').style.display = 'flex';
         document.getElementById('drop-zone').style.display = 'none';
         document.getElementById('import-bar').style.width = '60%';
         parent.postMessage({ pluginMessage: { type: 'CHECK_CONFLICTS', collections } }, '*');
@@ -481,6 +501,7 @@ function resetUI() {
     document.getElementById('drop-zone').style.display = 'flex';
     document.getElementById('file-chosen').style.display = 'none';
     document.getElementById('auto-scope-container').style.display = 'none';
+    document.getElementById('gen-styles-container').style.display = 'none';
 }
 
 function clearFile() { parsedCollections = null; resetUI(); document.getElementById('file-input').value = ''; }
@@ -492,11 +513,12 @@ function showError(msg) {
 
 function doImport(strategy) {
     const autoScope = document.getElementById('auto-scope-checkbox').checked;
+    const generateStyles = document.getElementById('gen-styles-checkbox').checked;
     document.getElementById('conflict-area').style.display = 'none';
     document.getElementById('preview-area').style.display = 'none';
     document.getElementById('progress').style.display = 'flex';
     document.getElementById('import-bar').style.width = '80%';
-    parent.postMessage({ pluginMessage: { type: 'IMPORT', collections: parsedCollections, strategy, autoScope } }, '*');
+    parent.postMessage({ pluginMessage: { type: 'IMPORT', collections: parsedCollections, strategy, autoScope, generateStyles } }, '*');
 }
 
 function flattenTokens(obj, prefix = '') {
@@ -598,7 +620,7 @@ window.onmessage = (e) => {
         }
     } else if (msg.type === 'IMPORT_COMPLETE') {
         const list = document.getElementById('result-list');
-        list.innerHTML = msg.results.map(r => {
+        let rows = msg.results.map(r => {
             const hasErrors = r.errors.length > 0;
             return `
             <details class="result-row">
@@ -606,13 +628,45 @@ window.onmessage = (e) => {
                     <div class="col-name">${r.name}</div>
                     <div class="col-size">${r.successCount}/${r.totalCount}</div>
                     <div class="col-status">
-                        <span class="status-tag ${hasErrors ? 'tag-red' : 'tag-green'}">${hasErrors ? 'FAILURE' : 'SYNCED'}</span>
+                        <span class="status-tag ${hasErrors ? 'tag-red' : 'tag-green'}">${hasErrors ? 'FAILURE' : 'SUCCESS'}</span>
                         ${hasErrors ? '<span class="dropdown-arrow">▼</span>' : ''}
                     </div>
                 </summary>
                 ${hasErrors ? `<div class="err-content">${r.errors.join('\n')}</div>` : ''}
             </details>
         `}).join('');
+
+        list.innerHTML = rows;
+
+        // Style generation results - separate section
+        const styleSection = document.getElementById('style-results');
+        const styleList = document.getElementById('style-result-list');
+        if (msg.styleResults) {
+            const sr = msg.styleResults;
+            const total = sr.text + sr.effect + sr.grid;
+            if (total > 0 || sr.errors.length > 0) {
+                let styleRows = '';
+                if (sr.text > 0) {
+                    styleRows += '<div class="result-row"><summary style="display:grid; grid-template-columns:2fr 1fr 1fr; align-items:center; padding:10px 12px; font-size:11px;"><div class="col-name">Text Styles</div><div class="col-size">' + sr.text + ' styles</div><div class="col-status"><span class="status-tag tag-blue">CREATED</span></div></summary></div>';
+                }
+                if (sr.effect > 0) {
+                    styleRows += '<div class="result-row"><summary style="display:grid; grid-template-columns:2fr 1fr 1fr; align-items:center; padding:10px 12px; font-size:11px;"><div class="col-name">Effect Styles</div><div class="col-size">' + sr.effect + ' styles</div><div class="col-status"><span class="status-tag tag-blue">CREATED</span></div></summary></div>';
+                }
+                if (sr.grid > 0) {
+                    styleRows += '<div class="result-row"><summary style="display:grid; grid-template-columns:2fr 1fr 1fr; align-items:center; padding:10px 12px; font-size:11px;"><div class="col-name">Grid Styles</div><div class="col-size">' + sr.grid + ' styles</div><div class="col-status"><span class="status-tag tag-blue">CREATED</span></div></summary></div>';
+                }
+                if (sr.errors.length > 0) {
+                    styleRows += '<details class="result-row"><summary><div class="col-name">Errors</div><div class="col-size">' + sr.errors.length + ' issue(s)</div><div class="col-status"><span class="status-tag tag-red">ISSUES</span><span class="dropdown-arrow">\u25bc</span></div></summary><div class="err-content">' + sr.errors.join('\n') + '</div></details>';
+                }
+                styleList.innerHTML = styleRows;
+                styleSection.style.display = 'block';
+            } else {
+                styleSection.style.display = 'none';
+            }
+        } else {
+            styleSection.style.display = 'none';
+        }
+
         document.getElementById('progress').style.display = 'none';
         document.getElementById('import-bar').style.width = '0%';
         document.getElementById('results').style.display = 'block';
