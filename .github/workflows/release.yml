@@ -24,10 +24,21 @@ jobs:
           zip -r ../token-import-plugin-figma.zip . -x "*.DS_Store" "node_modules/*"
           cd ..
 
+      - name: Get Tag Message
+        id: tag_message
+        run: |
+          git fetch --tags --force
+          # Extract tag message (handling multi-line)
+          MESSAGE=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Update Release
         uses: softprops/action-gh-release@v2
         with:
           name: Figma Variables Tokens Generator ${{ github.ref_name }}
+          body: ${{ steps.tag_message.outputs.body }}
           files: |
             figma-variables-tokens-generator.zip
             token-import-plugin-figma.zip
