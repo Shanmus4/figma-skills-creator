@@ -5,7 +5,7 @@
 Welcome to the **Figma Variables Generator Ecosystem**. This project consists of two core components working in tandem to automate the creation and structuring of complex design tokens directly inside Figma.
 
 1. **The AI Skill**: An expert AI prompt architecture that guides you through building a token system and generates a highly structured ZIP of W3C-compliant JSON files.
-2. **[Variables Tokens Collections Importer](https://www.figma.com/community/plugin/1619733963699677957)** (v2.0 Stable): A dedicated Figma plugin that reads the ZIP file and automatically imports all collections in the precise dependency order required by Figma.
+2. **[Variables Tokens Collections Importer](https://www.figma.com/community/plugin/1619733963699677957)** (v3.0 Stable): A dedicated Figma plugin that reads the ZIP file and automatically imports all collections in the precise dependency order required by Figma.
 
 ---
 
