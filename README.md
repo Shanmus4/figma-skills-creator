@@ -7,7 +7,7 @@ This project consists of two core components working in tandem to automate the c
 
 ## Demonstration
 
-<video src="https://github.com/Shanmus4/figma-variables-tokens-generator/raw/main/Figma%20Variables%20Generator%20-%20Small.mp4" controls="controls" muted="muted" width="100%"></video>
+https://github.com/Shanmus4/figma-variables-tokens-generator/raw/main/demo-small.mp4
 
 ---
 
